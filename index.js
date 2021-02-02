@@ -1,97 +1,3052 @@
-'use strict';var React=require("preact/compat"),ReactDOM=require("preact/compat"),{Component}=React,shallowEqual=Object.is;
-let hoistBlackList={$$typeof:1,render:1,compare:1,type:1,childContextTypes:1,contextType:1,contextTypes:1,defaultProps:1,getDefaultProps:1,getDerivedStateFromError:1,getDerivedStateFromProps:1,mixins:1,propTypes:1},isCompositeComponent=a=>"function"==typeof a,isReloadableComponent=a=>"function"==typeof a||"object"==typeof a,getComponentDisplayName=a=>(a=a.displayName||a.name)&&"ReactComponent"!==a?a:"Component",reactLifeCycleMountMethods=["componentWillMount","componentDidMount"];
-function isReactClass(a){return!(!a.prototype||!(React.Component.prototype.isPrototypeOf(a.prototype)||a.prototype.isReactComponent||a.prototype.componentWillMount||a.prototype.componentWillUnmount||a.prototype.componentDidMount||a.prototype.componentDidUnmount||a.prototype.render))}function isReactClassInstance(a){return a&&isReactClass({prototype:Object.getPrototypeOf(a)})}
-let ContextType=React.createContext?React.createContext():null,ConsumerType=ContextType&&ContextType.Consumer.$$typeof,ProviderType=ContextType&&ContextType.Provider.$$typeof,MemoType=React.memo&&React.memo(()=>null).$$typeof,LazyType=React.lazy&&React.lazy(()=>null).$$typeof,ForwardType=React.forwardRef&&React.forwardRef(()=>null).$$typeof,isContextConsumer=({type:a})=>a&&"object"==typeof a&&"$$typeof"in a&&a.$$typeof===ConsumerType&&ConsumerType,isContextProvider=({type:a})=>a&&"object"==typeof a&&
-"$$typeof"in a&&a.$$typeof===ProviderType&&ProviderType,isMemoType=({type:a})=>a&&"object"==typeof a&&"$$typeof"in a&&a.$$typeof===MemoType&&MemoType,isLazyType=({type:a})=>a&&"object"==typeof a&&"$$typeof"in a&&a.$$typeof===LazyType&&LazyType,isForwardType=({type:a})=>a&&"object"==typeof a&&"$$typeof"in a&&a.$$typeof===ForwardType&&ForwardType,isContextType=a=>isContextConsumer(a)||isContextProvider(a),getElementType=a=>{let b={type:a};return isContextConsumer(b)?"Consumer":isContextProvider(b)?
-"Provider":isLazyType(b)?"Lazy":isMemoType(b)?"Memo":isForwardType(b)?"Forward":isReactClass(a)?"Class":"function"==typeof b?"FC":"unknown"},getContextProvider=a=>a&&a._context,configuration={logLevel:"error",pureSFC:!0,pureRender:!0,allowSFC:!0,reloadHooks:!0,reloadLifeCycleHooks:!1,reloadHooksOnBodyChange:!0,disableHotRenderer:!1,integratedComparator:!1,integratedResolver:!1,disableHotRendererWhenInjected:!0,showReactDomPatchNotification:!0,onComponentRegister:!1,onComponentCreate:!1,ignoreSFC:!1,
-ignoreSFCWhenInjected:!0,ignoreComponents:!1,errorReporter:void 0,ErrorOverlay:void 0,trackTailUpdates:!0,wrapLazy:!0,IS_REACT_MERGE_ENABLED:!1},internalConfiguration={disableProxyCreation:!1},setConfiguration=a=>{for(let b in a)a.hasOwnProperty(b)&&(configuration[b]=a[b])},logger={debug(...a){-1!==["debug"].indexOf(configuration.logLevel)&&console.debug(...a)},log(...a){-1!==["debug","log"].indexOf(configuration.logLevel)&&console.log(...a)},warn(...a){-1!==["debug","log","warn"].indexOf(configuration.logLevel)&&
-console.warn(...a)},error(...a){-1!==["debug","log","warn","error"].indexOf(configuration.logLevel)&&console.error(...a)}};function safeReactConstructor(a,b){try{return b?new a(b.props,b.context):new a({},{})}catch(c){}return null}function isNativeFunction(a){return"function"==typeof a&&0<a.toString().indexOf("[native code]")}
-let identity=a=>a,indirectEval=eval,proxyClassCreator=function(){try{return indirectEval("class Test {}"),!0}catch(a){return!1}}()?(a,b)=>indirectEval(`\n(function(InitialParent, postConstructionAction) {\n  return class ${a.name||"HotComponent"} extends InitialParent {\n    /*\n     ! THIS IS NOT YOUR COMPONENT !\n     !  THIS IS REACT-HOT-LOADER  !\n  \n     this is a "${a.name}" component, patched by React-Hot-Loader\n     Sorry, but the real class code was hidden behind this facade\n     Please refer to https://github.com/gaearon/react-hot-loader for details...\n    */    \n    \n    constructor(props, context) {\n      super(props, context)\n      postConstructionAction.call(this)\n    }\n  }\n})\n`)(a,
-b):function(a,b){function c(c,e){a.call(this,c,e);b.call(this)}return c.prototype=Object.create(a.prototype),Object.setPrototypeOf(c,a),c};function deepPrototypeUpdate(a,b){let c=Object.getPrototypeOf(a),d=Object.getPrototypeOf(b);c&&d&&d!==c&&deepPrototypeUpdate(c,d);b.prototype&&b.prototype!==a.prototype&&(a.prototype=b.prototype)}function safeDefineProperty(a,b,c){try{Object.defineProperty(a,b,c)}catch(d){logger.warn("Error while wrapping",b," -> ",d)}}
-let PREFIX="__reactstandin__",PROXY_KEY=`${PREFIX}key`,GENERATION=`${PREFIX}proxyGeneration`,REGENERATE_METHOD=`${PREFIX}regenerateByEval`,UNWRAP_PROXY=`${PREFIX}getCurrent`,CACHED_RESULT=`${PREFIX}cachedResult`,PROXY_IS_MOUNTED=`${PREFIX}isMounted`,RENDERED_GENERATION="REACT_HOT_LOADER_RENDERED_GENERATION",RESERVED_STATICS=["length","displayName","name","arguments","caller","prototype","toString","valueOf","isStatelessFunctionalProxy",PROXY_KEY,UNWRAP_PROXY];
-function transferStaticProps(a,b,c,d){return Object.getOwnPropertyNames(a).forEach(c=>{if(-1===RESERVED_STATICS.indexOf(c)){var e=Object.getOwnPropertyDescriptor(a,c);shallowEqual(e,b[c])||safeDefineProperty(d,c,e)}}),Object.getOwnPropertyNames(d).forEach(e=>{if(-1===RESERVED_STATICS.indexOf(e)){var g=c&&Object.getOwnPropertyDescriptor(a,e),l=b[e];if(g&&l&&!shallowEqual(l,g))return void safeDefineProperty(d,e,g);if(g&&!l)return void safeDefineProperty(a,e,g);g={...Object.getOwnPropertyDescriptor(d,
-e),configurable:!0};b[e]=g;safeDefineProperty(a,e,g)}}),Object.getOwnPropertyNames(a).forEach(e=>{if(-1===RESERVED_STATICS.indexOf(e)&&!d.hasOwnProperty(e)){var g=Object.getOwnPropertyDescriptor(a,e);if(!g||g.configurable){g=c&&Object.getOwnPropertyDescriptor(c,e);var l=b[e];g&&l&&!shallowEqual(l,g)||safeDefineProperty(a,e,{value:void 0})}}}),b}
-function mergeComponents(a,b,c,d,e){let g={};try{let f=safeReactConstructor(b,d);try{deepPrototypeUpdate(c,b)}catch(q){}let n=safeReactConstructor(a,d);if(!f||!n)return g;b={...n,...f};let u=n[REGENERATE_METHOD],k=(l=Object.getPrototypeOf(a.prototype),[...Object.getOwnPropertyNames(l),...Object.getOwnPropertySymbols(l)]);Object.keys(b).forEach(b=>{if(0!==b.indexOf(PREFIX)){var c=f[b],d=n[b];if(c){if(isNativeFunction(c)||isNativeFunction(d)){var l=c.length===d.length,q=0<=k.indexOf(b)||a.prototype[b];
-return void(!l&&d||!q?logger.warn("React Hot Loader:","Updated class ",a.name,"contains native or bound function ",b,c,". Unable to reproduce, use arrow functions instead.",`(arity: ${c.length}/${d.length}, proto: ${q?"yes":"no"}`):u?g[b]=`Object.getPrototypeOf(this)['${b}'].bind(this)`:logger.warn("React Hot Loader:,","Non-controlled class",a.name,"contains a new native or bound function ",b,c,". Unable to reproduce"))}l=String(c);q=e[b];let f=0<=l.indexOf("=>"),n=0<=l.indexOf("function")||f,m=0<=
-l.indexOf("this");(l!==String(d)||q&&l!==String(q)||f&&m)&&(u?g[b]=c:n?logger.warn("React Hot Loader:"," Updated class ",a.name,"had different code for",b,c,". Unable to reproduce. Regeneration support needed."):g[b]=c)}}})}catch(f){logger.warn("React Hot Loader:",f)}var l;return g}
-function inject(a,b,c){if(a[GENERATION]!==b){let d=!!a[REGENERATE_METHOD];Object.keys(c).forEach(b=>{try{if(d){let d=String(c[b]).match(/_this([\d]+)/gi)||[];a[REGENERATE_METHOD](b,`(function REACT_HOT_LOADER_SANDBOX () {\n          var _this  = this; // common babel transpile\n          ${d.map(a=>`var ${a} = this;`)}\n\n          return ${c[b]};\n          }).call(this)`)}else a[b]=c[b]}catch(g){logger.warn("React Hot Loader: Failed to regenerate method ",b," of class ",a),logger.warn("got error",
-g)}});a[GENERATION]=b}}
-let has=Object.prototype.hasOwnProperty,proxies=new WeakMap,blackListedClassMembers="constructor render componentWillMount componentDidMount componentDidCatch componentWillReceiveProps componentWillUnmount hotComponentRender getInitialState getDefaultProps".split(" "),defaultRenderOptions={componentWillRender:identity,componentDidUpdate:a=>a,componentDidRender:a=>a},filteredPrototypeMethods=a=>Object.getOwnPropertyNames(a).filter(b=>{let c=Object.getOwnPropertyDescriptor(a,b);return c&&0!==b.indexOf(PREFIX)&&
-0>blackListedClassMembers.indexOf(b)&&"function"==typeof c.value}),setSFPFlag=(a,b)=>safeDefineProperty(a,"isStatelessFunctionalProxy",{configurable:!1,writable:!1,enumerable:!1,value:b}),copyMethodDescriptors=(a,b)=>(b&&(Object.getOwnPropertyNames(b).forEach(c=>safeDefineProperty(a,c,Object.getOwnPropertyDescriptor(b,c))),safeDefineProperty(a,"toString",{configurable:!0,writable:!1,enumerable:!1,value:function(){return String(b)}})),a),knownClassComponents=[],forEachKnownClass=a=>knownClassComponents.forEach(a);
-function createClassProxy(a,b,c={}){function d(){if(this[GENERATION]=0,B=this,w){let a=w;w=null;a()}inject(this,t,v)}function e(b,c=identity){return copyMethodDescriptors(function(...a){return this&&inject(this,t,v),c(this),!y&&m.prototype[b]&&m.prototype[b].apply(this,a)},a.prototype&&a.prototype[b])}function g(){if(k.componentWillRender(this),this&&inject(this,t,v),has.call(this,CACHED_RESULT)){var a=this[CACHED_RESULT];delete this[CACHED_RESULT]}else if(y)a=m(this.props,this.context);else{if((a=
-m.prototype.render||this.render)===f)throw Error("React-Hot-Loader: you are trying to render Component without .render method");a=a.apply(this,arguments)}return k.componentDidRender.call(this,a)}function l(){k.componentWillRender(this);this&&inject(this,t,v)}function f(...a){return k.componentWillRender(this),g.call(this,...a)}function n(){return m}function u(b){if("function"!=typeof b)throw Error("Expected a constructor.");if(b===m||proxies.get(b))return!1;y=!isReactClass(b);proxies.set(b,h);t++;
-var c=m;m=b;let d=getComponentDisplayName(m);return safeDefineProperty(p,"displayName",{configurable:!0,writable:!1,enumerable:!0,value:d}),r&&safeDefineProperty(r,"name",{value:d}),x=transferStaticProps(p,x,c,b),!y&&r&&(c=()=>{!function(a,b){try{let c=Object.getPrototypeOf(a.prototype),d=b.prototype;reactLifeCycleMountMethods.forEach(b=>{a:{var e=Object.getOwnPropertyDescriptor(c,b)||{value:c[b]},f=Object.getOwnPropertyDescriptor(d,b)||{value:d[b]};for(let a in e)if(String(e[a])!==String(f[a])){e=
-!1;break a}e=!0}e||logger.warn("React Hot Loader:","You did update",a.name,"s lifecycle method",b,". Unable to repeat")})}catch(G){}}(r,b);1<t&&(getElementCloseHook(r),filteredPrototypeMethods(r.prototype).forEach(a=>{has.call(b.prototype,a)||delete r.prototype[a]}));Object.setPrototypeOf(r.prototype,b.prototype);z(r,b.prototype);1<t&&(v=mergeComponents(r,b,a,B,v),getElementComparisonHook(r))},0<A?c():w=c),!0}let k={...defaultRenderOptions,...c},q={...configuration,...c.proxy};if(c=proxies.get(a))return c;
-let m,p,h,x={},v={},t=0,w=null,A=0,y=!isReactClass(a),B=null,C=a=>filteredPrototypeMethods(a).reduce((b,c)=>{var d;return b[c]=(d=a[c],copyMethodDescriptors(function(...a){return d.apply(this,a)},d)),b},{}),D=e("componentDidMount",a=>{a[PROXY_IS_MOUNTED]=!0;a[RENDERED_GENERATION]=get();A++}),E=e("componentDidUpdate",k.componentDidUpdate),F=e("componentWillUnmount",a=>{a[PROXY_IS_MOUNTED]=!1;A--}),z=(a,b={})=>{((a,b)=>{Object.keys(b).forEach(c=>safeDefineProperty(a.prototype,c,{configurable:!0,writable:!0,
-enumerable:!1,value:b[c]}))})(a,{...C(b),...q.pureRender?{}:{render:f},hotComponentRender:g,hotComponentUpdate:l,componentDidMount:D,componentDidUpdate:E,componentWillUnmount:F})},r=null;return y?q.allowSFC?p=function(a,b){let c=m(a,b);return isReactClassInstance(c)?(r=null,transferStaticProps(p,x,null,m),c):q.pureSFC&&!m.contextTypes?(p.isStatelessFunctionalProxy||setSFPFlag(p,!0),k.componentDidRender(c)):(setSFPFlag(p,!1),q.pureRender=!1,r=proxyClassCreator(Component,d),z(r),(a=new r(a,b))[CACHED_RESULT]=
-c,a)}:(q.pureRender=!1,r=proxyClassCreator(Component,d),z(r),p=r):(r=proxyClassCreator(a,d),z(r,a.prototype),knownClassComponents.push(r),p=r),safeDefineProperty(p,UNWRAP_PROXY,{configurable:!1,writable:!1,enumerable:!1,value:n}),safeDefineProperty(p,PROXY_KEY,{configurable:!1,writable:!1,enumerable:!1,value:b}),safeDefineProperty(p,"toString",{configurable:!0,writable:!1,enumerable:!1,value:function(){return String(m)}}),u(a),h={get:function(){return p},update:u,dereference:()=>{proxies.delete(a);
-proxies.delete(p);proxies.delete(m)},getCurrent:()=>m},proxies.set(a,h),proxies.set(p,h),safeDefineProperty(h,UNWRAP_PROXY,{configurable:!1,writable:!1,enumerable:!1,value:n}),h}
-let generation=1,hotComparisonCounter=0,hotComparisonRuns=0,hotReplacementGeneration=0,nullFunction=()=>({}),onHotComparisonOpen=nullFunction,onHotComparisonElement=nullFunction,onHotComparisonClose=nullFunction,getElementComparisonHook=a=>onHotComparisonElement(a),getElementCloseHook=a=>onHotComparisonClose(a),hotComparisonOpen=()=>0<hotComparisonCounter&&0<hotComparisonRuns&&0<hotReplacementGeneration,decrementHot=()=>{hotComparisonCounter--;hotComparisonCounter||(forEachKnownClass(onHotComparisonClose),
-hotComparisonRuns++)},enterHotUpdate=()=>{Promise.resolve((hotComparisonCounter||(forEachKnownClass(onHotComparisonElement),onHotComparisonOpen()),void hotComparisonCounter++)).then(()=>setTimeout(decrementHot,0))},increment=()=>(enterHotUpdate(),generation++),get=()=>generation,getHotGeneration=()=>hotReplacementGeneration,UNDEFINED_NAMES={Unknown:!0,Component:!0},areNamesEqual=(a,b)=>a===b||UNDEFINED_NAMES[a]&&UNDEFINED_NAMES[b],isFunctional=a=>"function"==typeof a,getTypeOf=a=>isReactClass(a)?
-"ReactComponent":isFunctional(a)?"StatelessFunctional":"Fragment";function clearStringFast(a){return 12>a.length?a:` ${a}`.slice(1)}
-let haveTextSimilarity=(a,b)=>a===b||distance(clearStringFast(a),clearStringFast(b))<.2*a.length,getBaseProto=a=>a.prototype.hotComponentRender?Object.getPrototypeOf(a.prototype):a.prototype,areSwappable=(a,b)=>{if(getIdByType(b)&&getIdByType(a)===getIdByType(b))return!0;if(getTypeOf(a)!==getTypeOf(b))return!1;if(isReactClass(a))return areNamesEqual(getComponentDisplayName(a),getComponentDisplayName(b))&&((a,b)=>{let c=getBaseProto(a),d=getBaseProto(b),l=0,f=0,n=0;return Object.getOwnPropertyNames(c).forEach(a=>
-{var b=Object.getOwnPropertyDescriptor(c,a);b=b&&(b.value||b.get||b.set);var e=Object.getOwnPropertyDescriptor(d,a);e=e&&(e.value||e.get||e.set);"function"==typeof b&&"constructor"!==a&&(n++,haveTextSimilarity(String(b),String(e))?l++:(f++,"render"===a&&f++))}),0<l&&1>=f||0===n})(a,b);if(isFunctional(a)){let c=getComponentDisplayName(a);return!!areNamesEqual(c,getComponentDisplayName(b))&&("Component"!==c||haveTextSimilarity(String(a),String(b)))}return!1};
-function merge(...a){let b={};for(let c of a)if(c instanceof Array)b instanceof Array||(b=[]),b=[...b,...c];else if(c instanceof Object)for(let d of Object.keys(c))(a=c[d])instanceof Object&&d in b&&(a=merge(b[d],a)),b={...b,[d]:a};return b}
-let signatures,proxiesByID,blackListedProxies,registeredComponents,idsByType,componentOptions,elementCount=0,renderOptions={},getIdByType=a=>idsByType.get(a),getProxyById=a=>proxiesByID[a],getProxyByType=a=>getProxyById(getIdByType(a)),registerComponent=a=>registeredComponents.set(a,1),isRegisteredComponent=a=>registeredComponents.has(a),updateFunctionProxyById=(a,b,c)=>(idsByType.set(b,a),proxiesByID[a]||(proxiesByID[a]=b),c(proxiesByID[a],b),proxiesByID[a]),updateProxyById=(a,b,c={})=>a?(idsByType.set(b,
-a),proxiesByID[a]?proxiesByID[a].update(b)&&hotReplacementGeneration++:proxiesByID[a]=createClassProxy(b,a,merge({},renderOptions,{proxy:componentOptions.get(b)||{}},c)),proxiesByID[a]):null,isColdType=a=>blackListedProxies.has(a),isTypeBlacklisted=a=>isColdType(a)||isCompositeComponent(a)&&(configuration.ignoreSFC&&!isReactClass(a)||configuration.ignoreComponents&&isReactClass(a)),getSignature=a=>signatures.get(a),resetProxies=()=>{proxiesByID={};idsByType=new WeakMap;blackListedProxies=new WeakMap;
-registeredComponents=new WeakMap;componentOptions=new WeakMap;signatures=new WeakMap;proxies=new WeakMap};resetProxies();
-let tune={allowSFC:!1},_jsxFileName="~src\\errorReporter.js",lastError=[],overlayStyle={position:"fixed",left:0,top:0,right:0,backgroundColor:"rgba(255,200,200,0.9)",color:"#000",fontFamily:'-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',fontSize:"12px",margin:0,padding:"16px",maxHeight:"50%",overflow:"auto",zIndex:1E4},inlineErrorStyle={backgroundColor:"#FEE"},liCounter={position:"absolute",left:"10px"},listStyle=
-{},EmptyErrorPlaceholder=({component:a})=>React.createElement("span",{style:inlineErrorStyle,role:"img","aria-label":"Rect-Hot-Loader Error",__self:void 0,__source:{fileName:_jsxFileName,lineNumber:46}},"\u269b\ufe0f\ud83d\udd25\ud83e\udd15 (",a?getComponentDisplayName(a.constructor||a):"Unknown location",")",a&&a.retryHotLoaderError&&React.createElement("button",{onClick:()=>a.retryHotLoaderError(),title:"Retry",__self:void 0,__source:{fileName:_jsxFileName,lineNumber:50}},"\u27f3"));
-class ErrorOverlay extends React.Component{constructor(...a){super(...a);ErrorOverlay.prototype.__init.call(this);ErrorOverlay.prototype.__init2.call(this);ErrorOverlay.prototype.__init3.call(this)}__init(){this.state={visible:!0}}__init2(){this.toggle=()=>this.setState({visible:!this.state.visible})}__init3(){this.retry=()=>this.setState(()=>{let {errors:a}=this.props;return enterHotUpdate(),clearExceptions(),a.map(({component:a})=>a).filter(Boolean).filter(({retryHotLoaderError:a})=>!!a).forEach(a=>
-a.retryHotLoaderError()),{}})}render(){let {errors:a}=this.props;if(!a.length)return null;let {visible:b}=this.state;return React.createElement("div",{style:overlayStyle,__self:this,__source:{fileName:_jsxFileName,lineNumber:140}},React.createElement("h2",{style:{margin:0},__self:this,__source:{fileName:_jsxFileName,lineNumber:141}},"\u269b\ufe0f\ud83d\udd25\ud83d\ude2d: hot update was not successful ",React.createElement("button",{onClick:this.toggle,__self:this,__source:{fileName:_jsxFileName,lineNumber:142}},
-b?"collapse":"expand"),React.createElement("button",{onClick:this.retry,__self:this,__source:{fileName:_jsxFileName,lineNumber:143}},"Retry")),b&&React.createElement("ul",{style:listStyle,__self:this,__source:{fileName:_jsxFileName,lineNumber:146}},a.map((b,d)=>React.createElement("li",{key:d,__self:this,__source:{fileName:_jsxFileName,lineNumber:148}},React.createElement("span",{style:liCounter,__self:this,__source:{fileName:_jsxFileName,lineNumber:149}},"(",d+1,"/",a.length,")"),(({error:a,errorInfo:b,
-component:c})=>(a||(a={message:"undefined error"}),React.createElement(React.Fragment,{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:78}},React.createElement("p",{style:{color:"red"},__self:void 0,__source:{fileName:_jsxFileName,lineNumber:79}},((a,b)=>a||b?React.createElement("span",{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:60}},"(",a?getComponentDisplayName(a.constructor||a):"Unknown location",a&&", ",b&&b.split("\n").filter(Boolean)[0],")"):null)(c,b&&b.componentStack),
-" ",a.toString?a.toString():a&&a.message||"undefined error"),b&&b.componentStack?React.createElement("div",{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:84}},React.createElement("div",{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:85}},"Stack trace:"),React.createElement("ul",{style:{color:"red",marginTop:"10px"},__self:void 0,__source:{fileName:_jsxFileName,lineNumber:86}},a.stack.split("\n").slice(1,2).map((a,b)=>React.createElement("li",{key:String(b),__self:void 0,__source:{fileName:_jsxFileName,
-lineNumber:90}},a)),React.createElement("hr",{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:91}}),b.componentStack.split("\n").filter(Boolean).map((a,b)=>React.createElement("li",{key:String(b),__self:void 0,__source:{fileName:_jsxFileName,lineNumber:95}},a)))):a.stack&&React.createElement("div",{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:100}},React.createElement("div",{__self:void 0,__source:{fileName:_jsxFileName,lineNumber:101}},"Stack trace:"),React.createElement("ul",
-{style:{color:"red",marginTop:"10px"},__self:void 0,__source:{fileName:_jsxFileName,lineNumber:102}},a.stack.split("\n").map((a,b)=>React.createElement("li",{key:String(b),__self:void 0,__source:{fileName:_jsxFileName,lineNumber:103}},a)))))))(b)))))}}
-let initErrorOverlay=()=>{if("undefined"!=typeof document&&document.body){var a=document.querySelector(".react-hot-loader-error-overlay");a||((a=document.createElement("div")).className="react-hot-loader-error-overlay",document.body.appendChild(a));lastError.length?ReactDOM.render(React.createElement(configuration.ErrorOverlay||ErrorOverlay,{errors:lastError,__self:void 0,__source:{fileName:_jsxFileName,lineNumber:174}}),a):a.parentNode.removeChild(a)}};
-function clearExceptions(){lastError.length&&(lastError=[],initErrorOverlay())}function logException(a,b,c){console.error(a);lastError.push({error:a,errorInfo:b,component:c});initErrorOverlay()}let hotRenderWithHooks=ReactDOM.hotRenderWithHooks||((a,b)=>b());
-function hydrateFiberStack(a,b){if(function(a,b){a.type=b.type;a.elementType=b.elementType||b.type;a.children=[];a.instance="function"==typeof b.type?b.stateNode:a;a.fiber=b;a.instance||(a.instance={SFC_fake:a.type,props:{},render:()=>hotRenderWithHooks(b,()=>a.type(a.instance.props))})}(b,a),a.child){({child:a}=a);do{let c={};hydrateFiberStack(a,c);b.children.push(c);a=a.sibling}while(a)}}
-function hydrateLegacyStack(a,b){if(a._currentElement&&function(a,b,e){a.type=b;a.elementType=b;a.children=[];a.instance=e||a;"function"==typeof b&&b.isStatelessFunctionalProxy&&(a.instance={SFC_fake:b,props:{},render:()=>b(a.instance.props)})}(b,a._currentElement.type,a._instance||b),a._renderedComponent){let c={};hydrateLegacyStack(a._renderedComponent,c);b.children.push(c)}else a._renderedChildren&&Object.keys(a._renderedChildren).forEach(c=>{let d={};hydrateLegacyStack(a._renderedChildren[c],
-d);b.children.push(d)})}let shouldNotPatchComponent=a=>isTypeBlacklisted(a);function resolveUtility(a){if("object"==typeof a){if(configuration.integratedComparator)return a;let b={type:a};if(isLazyType(b)||isMemoType(b)||isForwardType(b)||isContextType(b))return getProxyByType(a)||a}}function resolveProxy(a){if(a[PROXY_KEY])return a}function resolveNotComponent(a){if(!isCompositeComponent(a))return a}
-let resolveSimpleType=a=>{if(!a)return a;var b=resolveProxy(a)||resolveUtility(a)||resolveNotComponent(a);return b||(b=getProxyByType(a))&&b.getCurrent&&b.getCurrent()||a},resolveType=(a,b={})=>a&&(resolveProxy(a)||resolveUtility(a)||resolveNotComponent(a)||function(a,b={}){var c=getProxyByType(a);shouldNotPatchComponent(a)?a=c?c.getCurrent():a:(!c&&configuration.onComponentCreate&&(configuration.onComponentCreate(a,getComponentDisplayName(a)),shouldNotPatchComponent(a))?b=a:(internalConfiguration.disableProxyCreation?
-b=c:(c=a,b=getProxyByType(c)||updateProxyById("auto-"+elementCount++,c,b)),b=(a=b)?a.get():void 0),a=b);return a}(a,b))||a;function getReactStack(a){let b={};return(a=a._reactInternalFiber||a._reactInternalInstance||null)&&("number"==typeof a.tag?hydrateFiberStack(a,b):hydrateLegacyStack(a,b)),b}
-let deepMarkUpdate=a=>{(({fiber:a})=>{if(a&&"string"!=typeof a.type){var b=resolveType(a.type)||a.type;a.type=b;a.expirationTime=1;a.alternate&&(a.alternate.expirationTime=1,a.alternate.type=a.type);a.memoizedProps&&"object"==typeof a.memoizedProps&&(a.memoizedProps={cacheBusterProp:!0,...a.memoizedProps});a.stateNode}})(a);a.children&&a.children.forEach(deepMarkUpdate)},renderStack=[],stackReport=()=>{let a=renderStack.slice().reverse();logger.warn("in",a[0].name,a)},emptyMap=new Map,stackContext=
-()=>(renderStack[renderStack.length-1]||{}).context||emptyMap,getElementType$1=a=>a.type[UNWRAP_PROXY]?a.type[UNWRAP_PROXY]():a.type,filterNullArray=a=>a?a.filter(a=>!!a):[],unflatten=a=>a.reduce((a,c)=>(Array.isArray(c)?a.push(...unflatten(c)):a.push(c),a),[]),isArray=a=>Array.isArray(a),asArray=a=>isArray(a)?a:[a],render=(a,b)=>{return a?(a.hotComponentUpdate&&a.hotComponentUpdate(),(c=a)&&(isReactClassInstance(c)||c.SFC_fake)?a.hotComponentRender?a.hotComponentRender():a.render():isForwardType(a)?
-hotRenderWithHooks(b.fiber,()=>a.type.render(a.props,null)):isArray(a)?a.map(render):a.children?a.children:[]):[];var c},NO_CHILDREN={children:[]},mapChildren=(a,b)=>({children:a.filter(a=>a).map((a,d)=>{if("object"!=typeof a||a.isMerged)return a;d=b[d]||{};var c=asArray(d.children||[]);if(Array.isArray(a))return{type:null,...mapChildren(a,c)};let g=asArray(a.props&&a.props.children||a.children||[]);return c="function"!==a.type&&c.length&&mapChildren(g,c),{nextProps:a.props,isMerged:!0,...d,...c||
-{},type:a.type}})}),mergeInject=(a,b,c)=>{if(a&&!Array.isArray(a))return mergeInject([a],b);if(b&&!Array.isArray(b))return mergeInject(a,[b]);if(!a||!b)return NO_CHILDREN;if(a.length===b.length)return mapChildren(a,b);var d=filterNullArray(a);return d.length===b.length?mapChildren(d,b):(d=unflatten(d),b=unflatten(b),d.length===b.length?mapChildren(d,b):(0===b.length&&1===d.length&&"object"!=typeof d[0]||configuration.IS_REACT_MERGE_ENABLED||(logger.warn("React-hot-loader: unable to merge ",a,"and children of ",
-c),stackReport()),NO_CHILDREN))},transformFlowNode=a=>a.reduce((a,c)=>{if(c&&(({type:a})=>React.Fragment&&a===React.Fragment)(c)){if(c.props&&c.props.children)return[...a,...filterNullArray(asArray(c.props.children))];if(c.children)return[...a,...filterNullArray(asArray(c.children))]}return[...a,c]},[]),scheduledUpdates=[],scheduledUpdate=0,flushScheduledUpdates=()=>{let a=scheduledUpdates;scheduledUpdates=[];scheduledUpdate=0;a.forEach(a=>{var b;if(b=a[PROXY_IS_MOUNTED]){let {updater:c,forceUpdate:e}=
-a;"function"==typeof e?a.forceUpdate():c&&"function"==typeof c.enqueueForceUpdate&&c.enqueueForceUpdate(a);b=void 0}return b})},scheduleInstanceUpdate=a=>{scheduledUpdates.push(a);scheduledUpdate||(scheduledUpdate=setTimeout(flushScheduledUpdates,4))},hotReplacementRender=(a,b)=>{if(isReactClassInstance(a)){let a=getElementType$1(b);renderStack.push({name:getComponentDisplayName(a),type:a,props:b.instance.props,context:stackContext()})}try{let c=transformFlowNode(filterNullArray(asArray(render(a,
-b)))),{children:d}=b;c.forEach((a,c)=>{var e=a.type;let f=d[c];if(c=b=>{let c=b.props,e={...c,...a.nextProps||{},...a.props||{}};isReactClassInstance(b)&&b.componentWillUpdate&&b.componentWillUpdate({...c},b.state);b.props=e;hotReplacementRender(b,f);b.props=c},"object"==typeof a&&f&&f.instance)if(typeof e==typeof f.elementType)if((isMemoType(a)||isLazyType(a))&&(f.children&&f.children[0]&&scheduleInstanceUpdate(f.children[0].instance),e=e.type||e),isForwardType(a))c(f.instance);else if(isContextConsumer(a))try{var g=
-stackContext().get(getContextProvider(e));c({children:(a.props?a.props.children:a.children[0])(void 0!==g?g:e._currentValue)})}catch(u){}else if("function"!=typeof e){g=e?getComponentDisplayName(e):"empty";let d=stackContext();isContextProvider(a)&&(d=new Map(d),d.set(getContextProvider(e),{...a.nextProps||{},...a.props||{}}.value),g="ContextProvider");renderStack.push({name:g,type:e,props:b.instance.props,context:d});c(mergeInject(transformFlowNode(asArray(a.props?a.props.children:a.children)),f.instance.children,
-f.instance));renderStack.pop()}else e===f.type?c(f.instance):(e=getElementType$1(a),isMemoType(a)&&(e=e.type||e),f.type[PROXY_KEY]||configuration.IS_REACT_MERGE_ENABLED||isTypeBlacklisted(f.type)&&logger.warn("React-hot-loader: cold element got updated ",f.type),isRegisteredComponent(e)||isRegisteredComponent(f.type)?resolveType(e)===resolveType(f.type)&&c(f.instance):areSwappable(e,f.type)?(updateProxyById(f.type[PROXY_KEY]||getIdByType(f.type),e),c(f.instance)):(logger.warn(`React-hot-loader: a ${getComponentDisplayName(e)} was found where a ${getComponentDisplayName(f)} was expected.\n          ${e}`),
-stackReport())),scheduleInstanceUpdate(f.instance);else e&&f.type&&(logger.warn("React-hot-loader: got ",e,"instead of",f.type),stackReport());else f&&f.children&&f.children.length&&(logger.error("React-hot-loader: reconciliation failed","could not dive into [",a,"] while some elements are still present in the tree."),stackReport())})}catch(c){c.then||logger.warn("React-hot-loader: run time error during reconciliation",c)}isReactClassInstance(a)&&renderStack.pop()},ERROR_STATE="react_hot_loader_catched_error",
-ERROR_STATE_PROTO="react_hot_loader_catched_error-prototype",OLD_RENDER="react_hot_loader_original_render";function componentDidCatch(a,b){this[ERROR_STATE]={location:"boundary",error:a,errorInfo:b,generation:get()};Object.getPrototypeOf(this)[ERROR_STATE_PROTO]=this[ERROR_STATE];configuration.errorReporter||logException(a,b,this);this.forceUpdate()}
-function componentRender(...a){let {error:b,errorInfo:c,generation:d}=this[ERROR_STATE]||{};if(b&&d===get())return React.createElement(configuration.errorReporter||EmptyErrorPlaceholder,{error:b,errorInfo:c,component:this});this.hotComponentUpdate&&this.hotComponentUpdate();try{return this[OLD_RENDER].render.call(this,...a)}catch(e){return this[ERROR_STATE]={location:"render",error:e,generation:get()},configuration.errorReporter||logException(e,void 0,this),componentRender.call(this)}}
-function retryHotLoaderError(){delete this[ERROR_STATE];this.forceUpdate()}onHotComparisonOpen=()=>({});onHotComparisonElement=a=>{if(hotComparisonOpen()){if({prototype:a}=a,!a[OLD_RENDER]){let b=Object.getOwnPropertyDescriptor(a,"render");a[OLD_RENDER]={descriptor:b?b.value:void 0,render:a.render};a.componentDidCatch=componentDidCatch;a.retryHotLoaderError=retryHotLoaderError;a.render=componentRender}delete a[ERROR_STATE]}};
-onHotComparisonClose=({prototype:a})=>{if(a[OLD_RENDER]){let {generation:b}=a[ERROR_STATE_PROTO]||{};b===get()||(delete a.componentDidCatch,delete a.retryHotLoaderError,a.render===componentRender?a[OLD_RENDER].descriptor?a.render=a[OLD_RENDER].descriptor:delete a.render:console.error("React-Hot-Loader: something unexpectedly mutated Component",a),delete a[ERROR_STATE_PROTO],delete a[OLD_RENDER])}};
-renderOptions={componentWillRender:function(a){{var b=get();let c=a[RENDERED_GENERATION];a[RENDERED_GENERATION]=b;if(!internalConfiguration.disableProxyCreation&&c&&c!==b){enterHotUpdate();b=getReactStack(a);if(!configuration.disableHotRenderer)try{internalConfiguration.disableProxyCreation=!0,renderStack=[],hotReplacementRender(a,b)}catch(d){logger.warn("React-hot-loader: reconcilation failed due to error",d)}finally{internalConfiguration.disableProxyCreation=!1}ReactDOM.hotCleanup&&ReactDOM.hotCleanup();
-deepMarkUpdate(b)}}},componentDidRender:function proxyWrapper(a){var c;if(internalConfiguration.disableProxyCreation||(c=this,scheduledUpdates=scheduledUpdates.filter(a=>a!==c)),!a)return a;if(Array.isArray(a))return a.map(proxyWrapper);if("function"==typeof a.type){let c=getProxyByType(a.type);if(c)return{...a,type:c.get()}}return a},componentDidUpdate:a=>{a[RENDERED_GENERATION]=get();flushScheduledUpdates()}};
-class AppContainer extends React.Component{static getDerivedStateFromProps(a,b){return b.generation!==get()?{error:null,generation:get()}:null}static __initStatic(){this.reactHotLoadable=!1}constructor(a){super(a);configuration.showReactDomPatchNotification&&(configuration.showReactDomPatchNotification=!1,console.warn("React-Hot-Loader: react-\ud83d\udd25-dom patch is not detected. React 16.6+ features may not work."));this.state={error:null,errorInfo:null,generation:0}}shouldComponentUpdate(a,b){return!b.error||
-!this.state.error}componentDidCatch(a,b){if(logger.error(a),!hotComparisonOpen())throw this.setState({}),a;let {errorReporter:c=configuration.errorReporter}=this.props;c||logException(a,b,this);this.setState({error:a,errorInfo:b})}retryHotLoaderError(){this.setState({error:null},()=>{retryHotLoaderError.call(this)})}render(){let {error:a,errorInfo:b}=this.state,{errorReporter:c=configuration.errorReporter||EmptyErrorPlaceholder}=this.props;if(a&&this.props.errorBoundary)return React.createElement(c,
-{error:a,errorInfo:b,component:this,__self:this,__source:{fileName:"~src\\AppContainer.dev.js",lineNumber:82}});if(!this.hotComponentUpdate)throw Error("React-Hot-Loader: AppContainer should be patched");return this.hotComponentUpdate(),React.Children.only(this.props.children)}}AppContainer.__initStatic();AppContainer.defaultProps={errorBoundary:!0};
-let _jsxFileName$2="~src\\reconciler\\fiberUpdater.js",getLazyConstructor=a=>a._ctor?a._ctor:a._payload?a._payload._result:null,patched=a=>(a.isPatchedByReactHotLoader=!0,a),patchLazyConstructor=a=>{if(configuration.wrapLazy&&!getLazyConstructor(a).isPatchedByReactHotLoader){let b=getLazyConstructor(a);((a,b)=>{b.isPatchedByReactHotLoader=!0;a._ctor?a._ctor=b:a._payload?(a._payload._hotUpdated=!0,a._payload._result=b):console.error("could not update lazy component")})(a,()=>b().then(a=>{let b=resolveType(a.default);
-return enterHotUpdate(),React.forwardRef?{default:patched(React.forwardRef(function(a,c){return React.createElement(AppContainer,{__self:this,__source:{fileName:_jsxFileName$2,lineNumber:66}},React.createElement(b,{...a,ref:c,__self:this,__source:{fileName:_jsxFileName$2,lineNumber:67}}))}))}:{default:patched(a=>React.createElement(AppContainer,{__self:void 0,__source:{fileName:_jsxFileName$2,lineNumber:55}},React.createElement(b,{...a,__self:void 0,__source:{fileName:_jsxFileName$2,lineNumber:56}})))}}))}},
-updateLazy=(a,b)=>{let c=getLazyConstructor(b);getLazyConstructor(a)!==c&&c();patchLazyConstructor(a);patchLazyConstructor(b)},updateMemo=(a,{type:b})=>{a.type=resolveType(b)},updateForward=(a,{render:b})=>{a.render=b},updateContext=()=>{};
-function haveEqualSignatures(a,b){try{let c=getSignature(a),d=getSignature(b);if(void 0===c&&void 0===d)return!0;if(void 0===c||void 0===d||c.key!==d.key)return!1;let e=c.getCustomHooks(),g=d.getCustomHooks();if(e.length!==g.length)return!1;for(a=0;a<g.length;a++)if(!haveEqualSignatures(e[a],g[a]))return!1}catch(c){return logger.error("React-Hot-Loader: error occurred while comparing hook signature",c),!1}return!0}
-let areSignaturesCompatible=(a,b)=>!!haveEqualSignatures(a,b)||(logger.warn("\u269b\ufe0f\ud83d\udd25\ud83c\udfa3 Hook order change detected: component",a,"has been remounted"),!1),compareRegistered=(a,b)=>getIdByType(a)===getIdByType(b)&&getProxyByType(a)===getProxyByType(b)&&areSignaturesCompatible(a,b),areDeepSwappable=(a,b)=>{let c={type:a};return"function"==typeof a?areSwappable(a,b):isForwardType(c)?areDeepSwappable(a.render,b.render):!!isMemoType(c)&&areDeepSwappable(a.type,b.type)},knownPairs=
-new WeakMap,emptyMap$1=new WeakMap,hotComponentCompare=(a,b,c,d)=>{let e=hotComparisonOpen(),g=a===(b=configuration.integratedResolver?resolveType(b):b);return e?isReloadableComponent(a)&&isReloadableComponent(b)&&!isColdType(a)&&!isColdType(a)&&a&&b?(g=((a,b,c,e)=>{let d=a===b;if(a&&!b||!a&&b||typeof a!=typeof b||getElementType(a)!==getElementType(b))return d;if(getIdByType(b)||getIdByType(a)){if(!compareRegistered(a,b))return!1;d=!0}return isForwardType({type:a})&&isForwardType({type:b})?!!compareRegistered(a.render,
-b.render)&&(a.render===b.render||areDeepSwappable(a,b)?(c(b),!0):d):isMemoType({type:a})&&isMemoType({type:b})?!!compareRegistered(a.type,b.type)&&(a.type===b.type||areDeepSwappable(a,b)?(e?e.$$typeof===b.$$typeof?c(b):c(b.type):(logger.warn("Please update hot-loader/react-dom"),isReactClass(b.type)?c(b):c(b.type)),!0):d):isLazyType({type:a})?(updateLazy(a,b),d):isContextType({type:a})?(c(b),d):"function"==typeof b&&(d||b!==a&&areSignaturesCompatible(b,a)&&areSwappable(b,a))?((e=(e=b[UNWRAP_PROXY])&&
-getProxyByType(e()))?(e.dereference(),a=a[PROXY_KEY]||getIdByType(a),b=(c=b[UNWRAP_PROXY])?c():b,updateProxyById(a,b)):c(b),!0):d})(a,b,c,d),(c=knownPairs.get(a)||new WeakMap).set(b,g),knownPairs.set(a,c),g):g:((c=g)||(c=(knownPairs.get(a)||emptyMap$1).get(b)),c||!1)},forceSimpleSFC={proxy:{pureSFC:!0}},hookWrapper=a=>{let b=function(b,d){if(configuration.reloadHooks&&d){const c=[...d];return configuration.reloadHooksOnBodyChange&&c.push(String(b)),(0<d.length||configuration.reloadLifeCycleHooks&&
-0===d.length)&&c.push(getHotGeneration()),a(b,c)}return a(b,d)};return b.isPatchedByReactHotLoader=!0,b},noDeps=()=>[],reactHotLoader={signature:(a,b,c=noDeps)=>(signatures.set(a,{key:b,getCustomHooks:c}),a),register(a,b,c,d={}){let e=`${c}#${b}`;if(isCompositeComponent(a)&&"string"==typeof b&&b&&"string"==typeof c&&c){let g=getProxyById(e);g&&g.getCurrent()!==a&&(configuration.IS_REACT_MERGE_ENABLED||(isTypeBlacklisted(a)||isTypeBlacklisted(g.getCurrent()))&&logger.error("React-hot-loader: Cold component",
-b,"at",c,"has been updated"));configuration.onComponentRegister&&configuration.onComponentRegister(a,b,c);configuration.onComponentCreate&&configuration.onComponentCreate(a,getComponentDisplayName(a));registerComponent(updateProxyById(e,a,d).get());registerComponent(a);increment()}isContextType({type:a})&&(["Provider","Consumer"].forEach(b=>{let c=Object.getOwnPropertyDescriptor(a,b);c&&c.value&&updateFunctionProxyById(`${e}:${b}`,c.value,updateContext)}),updateFunctionProxyById(e,a,updateContext),
-increment());isLazyType({type:a})&&(updateFunctionProxyById(e,a,updateLazy),increment());isForwardType({type:a})&&(reactHotLoader.register(a.render,`${b}:render`,c,forceSimpleSFC),updateFunctionProxyById(e,a,updateForward),increment());isMemoType({type:a})&&(reactHotLoader.register(a.type,`${b}:memo`,c,forceSimpleSFC),updateFunctionProxyById(e,a,updateMemo),increment())},reset(){resetProxies()},preact(a){((a,c)=>{let b=a.options.vnode;setConfiguration(tune);a.options.vnode=a=>{a.type?a.type=c(a.type):
-a.nodeName&&(a.nodeName=c(a.nodeName));b&&b(a)}})(a,resolveType)},resolveType:a=>resolveType(a),patch(a,b){let c=resolveType;if(b&&!b.render&&logger.error("React-Hot-Loader: broken state detected, please import React-Hot-Loader before react-dom, see https://github.com/gaearon/react-hot-loader/issues/1315"),b&&b.setHotElementComparator&&(b.setHotElementComparator(hotComponentCompare),configuration.disableHotRenderer=configuration.disableHotRendererWhenInjected,configuration.ignoreSFC=configuration.ignoreSFCWhenInjected,
-configuration.IS_REACT_MERGE_ENABLED=!0,configuration.showReactDomPatchNotification=!1,configuration.integratedComparator=!0,b.setHotTypeResolver&&(configuration.integratedResolver=!0,c=resolveSimpleType,b.setHotTypeResolver(resolveType))),!a.createElement.isPatchedByReactHotLoader){let b=a.createElement;a.createElement=(a,...d)=>b(c(a),...d);a.createElement.isPatchedByReactHotLoader=!0}if(!a.cloneElement.isPatchedByReactHotLoader){let b=a.cloneElement;a.cloneElement=(a,...d)=>{let e=a.type&&c(a.type);
-return e&&e!==a.type?b({...a,type:e},...d):b(a,...d)};a.cloneElement.isPatchedByReactHotLoader=!0}if(a.createFactory.isPatchedByReactHotLoader||(a.createFactory=b=>{let c=a.createElement.bind(null,b);return c.type=b,c},a.createFactory.isPatchedByReactHotLoader=!0),!a.Children.only.isPatchedByReactHotLoader){let b=a.Children.only;a.Children.only=a=>b({...a,type:c(a.type)});a.Children.only.isPatchedByReactHotLoader=!0}if(a.useEffect&&!a.useEffect.isPatchedByReactHotLoader){a.useEffect=hookWrapper(a.useEffect);
-a.useLayoutEffect=hookWrapper(a.useLayoutEffect);a.useCallback=hookWrapper(a.useCallback);a.useMemo=hookWrapper(a.useMemo);let {useContext:b}=a;a.useContext=(a,...d)=>b(c(a),...d)}}},openedModules={},lastModuleOpened="",hotModules={},hotModule=a=>(hotModules[a]||(hotModules[a]={instances:[],updateTimeout:0}),hotModules[a]),createQueue=(a=a=>a())=>{let b,c=[],d=()=>{c.forEach(a=>a());c=[]};return e=>(0===c.length&&(b=Promise.resolve().then(()=>a(d))),c.push(e),b)},requireIndirect="undefined"!=typeof __webpack_require__?
-__webpack_require__:require,runInRequireQueue=createQueue(),runInRenderQueue=createQueue(a=>{ReactDOM.unstable_batchedUpdates?ReactDOM.unstable_batchedUpdates(a):a()});reactHotLoader.register(AppContainer,"AppContainer","hot-dev");let getProxyOrType=a=>{let b=getProxyByType(a);return b?b.get():a};reactHotLoader.patch(React,ReactDOM);
-let peq=new Uint32Array(65536),distance=(a,b)=>(a.length<b.length&&([b,a]=[a,b]),0===b.length?a.length:32>=a.length?((a,b)=>{let c=a.length,d=b.length,l=1<<c-1,f=-1,n=0,u=c,k=c;for(;k--;)peq[a.charCodeAt(k)]|=1<<k;for(k=0;k<d;k++){let a=peq[b.charCodeAt(k)],c=a|n;a|=(a&f)+f^f;n|=~(a|f);f&=a;n&l&&u++;f&l&&u--;n=n<<1|1;f=f<<1|~(c|n);n&=c}for(k=c;k--;)peq[a.charCodeAt(k)]=0;return u})(a,b):((a,b)=>{let c=b.length,d=a.length,l=[],f=[];for(var n=Math.ceil(c/32),u=Math.ceil(d/32),k=0;k<n;k++)f[k]=-1,l[k]=
-0;for(n=0;n<u-1;n++){var q=0,m=-1,p=32*n;k=Math.min(32,d)+p;for(var h=p;h<k;h++)peq[a.charCodeAt(h)]|=1<<h;for(h=0;h<c;h++){var x=peq[b.charCodeAt(h)],v=f[h/32|0]>>>h%32&1,t=l[h/32|0]>>>h%32&1,w=x|q;q|=~((x=((x|t)&m)+m^m|x|t)|m);m&=x;q>>>31^v&&(f[h/32|0]^=1<<h%32);m>>>31^t&&(l[h/32|0]^=1<<h%32);m=m<<1|t;m|=~(w|(q=q<<1|v));q&=w}for(;p<k;p++)peq[a.charCodeAt(p)]=0}m=0;k=-1;n*=32;u=Math.min(32,d-n)+n;for(p=n;p<u;p++)peq[a.charCodeAt(p)]|=1<<p;p=d;for(h=0;h<c;h++)q=peq[b.charCodeAt(h)],v=f[h/32|0]>>>
-h%32&1,w=q|m,p+=(m|=~((q=((q|(t=l[h/32|0]>>>h%32&1))&k)+k^k|q|t)|k))>>>d%32-1&1,p-=(k&=q)>>>d%32-1&1,m>>>31^v&&(f[h/32|0]^=1<<h%32),k>>>31^t&&(l[h/32|0]^=1<<h%32),k=k<<1|t,k|=~(w|(m=m<<1|v)),m&=w;for(b=n;b<u;b++)peq[a.charCodeAt(b)]=0;return p})(a,b));
-module.exports=Object.assign({},reactHotLoader,{AppContainer,areComponentsEqual:(a,b)=>getProxyOrType(a)===getProxyOrType(b),cold:a=>(blackListedProxies.set(a,!0),a),compareOrSwap:(a,b)=>hotComponentCompare(a,b),configureComponent:(a,b)=>componentOptions.set(a,b),enterModule:a=>{a&&a.id?(lastModuleOpened=a.id,openedModules[a.id]=!0):logger.warn("React-hot-loader: no `module` variable found. Did you shadow a system variable?")},hot:a=>{if(!a)throw Error("React-hot-loader: `hot` was called without any argument provided");
-let b=a.id||a.i||a.filename;if(!b)throw console.error("`module` provided",a),Error("React-hot-loader: `hot` could not find the `name` of the the `module` you have provided");let c=hotModule(b);((a,b)=>{let c=a=>{if(a&&a instanceof Error)return void console.error(a);let c=hotModule(b),d=()=>{runInRenderQueue(()=>{enterHotUpdate();const a=getHotGeneration();if(c.instances.forEach(a=>a.forceUpdate()),configuration.trackTailUpdates){let b=0;const c=()=>{setTimeout(()=>{getHotGeneration()!==a?(logger.warn("React-Hot-Loader: some components were updated out-of-bound. Updating your app to reconcile the changes."),
-increment(),d()):5>++b&&c()},16)};c()}})};runInRequireQueue(()=>{try{requireIndirect(b)}catch(q){console.error("React-Hot-Loader: error detected while loading",b),console.error(q)}}).then(d)};a.hot?(a.hot.accept(c),a.hot.addStatusHandler&&"idle"===a.hot.status()&&a.hot.addStatusHandler(a=>{"apply"===a&&(clearExceptions(),c())})):logger.warn("React-hot-loader: Hot Module Replacement is not enabled")})(a,b);clearExceptions();let d=(a=>setTimeout(()=>{let b=`hot update failed for module "${a}". Last file processed: "${lastModuleOpened}".`;
-logger.error(b);logException({toString:()=>b})},100))(b),e=!1;return(g,l)=>(clearTimeout(d),e||(e=!0,reactHotLoader.register(g,getComponentDisplayName(g),`RHL${b}`)),((a,b)=>(function(a,b){let c=Object.getOwnPropertyNames(Object.getPrototypeOf(a));Object.getOwnPropertyNames(a).forEach(d=>{hoistBlackList[d]||-1!==c.indexOf(d)||Object.defineProperty(b,d,Object.getOwnPropertyDescriptor(a,d))})}(b,a),b.displayName=`HotExported${getComponentDisplayName(a)}`,b))(g,class extends Component{componentDidMount(){c.instances.push(this)}componentWillUnmount(){if(a&&
-openedModules[a.id]){let a=getComponentDisplayName(g);logger.error(`React-hot-loader: Detected AppContainer unmount on module '${b}' update.\nDid you use "hot(${a})" and "ReactDOM.render()" in the same file?\n"hot(${a})" shall only be used as export.\nPlease refer to "Getting Started" (https://github.com/gaearon/react-hot-loader/).`)}c.instances=c.instances.filter(a=>a!==this)}render(){return React.createElement(AppContainer,{...l,__self:this,__source:{fileName:"~src\\hot.dev.js",lineNumber:170}},
-React.createElement(g,{...this.props,__self:this,__source:{fileName:"~src\\hot.dev.js",lineNumber:171}}))}}))},leaveModule:a=>{a&&a.id&&delete openedModules[a.id]},setConfig:a=>setConfiguration(a)})
+import React, { Component } from 'react';
+import ReactDOM from 'react-dom';
+//import shallowEqual from 'shallowequal';
+//import levenshtein from 'fast-levenshtein';
+
+//import hoistNonReactStatic from 'hoist-non-react-statics';
+
+//preact 8 config
+
+/* const tune = {
+  allowSFC: false,
+};
+
+export const preactAdapter = (instance, resolveType) => {
+  const oldHandler = instance.options.vnode;
+
+  setConfiguration(tune);
+
+  instance.options.vnode = vnode => {
+    if (vnode.type) {
+      vnode.type = resolveType(vnode.type);
+    } 
+    else if (vnode.nodeName) {
+      vnode.nodeName = resolveType(vnode.nodeName);
+    }
+    if (oldHandler) {
+      oldHandler(vnode);
+    }
+  };
+}; */
+
+
+var shallowEqual = Object.is
+
+const hoistBlackList = {
+  $$typeof: 1,
+  render: 1,
+  compare: 1,
+  type: 1,
+  childContextTypes: 1,
+  contextType: 1,
+  contextTypes: 1,
+  defaultProps: 1,
+  getDefaultProps: 1,
+  getDerivedStateFromError: 1,
+  getDerivedStateFromProps: 1,
+  mixins: 1,
+  propTypes: 1
+}
+
+export function hoistNonReactStatic(base, target) {
+  const protoProps = Object.getOwnPropertyNames(Object.getPrototypeOf(base))
+  Object.getOwnPropertyNames(base).forEach(key => {
+      if (!hoistBlackList[key] && protoProps.indexOf(key) === -1) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(base, key))
+      }
+  })
+}
+
+const isCompositeComponent = type => typeof type === 'function';
+const isReloadableComponent = type => typeof type === 'function' || typeof type === 'object';
+const getComponentDisplayName = type => {
+  const displayName = type.displayName || type.name;
+  return displayName && displayName !== 'ReactComponent' ? displayName : 'Component';
+};
+const reactLifeCycleMountMethods = ['componentWillMount', 'componentDidMount'];
+function isReactClass(Component) {
+  return !!(Component.prototype && (React.Component.prototype.isPrototypeOf(Component.prototype) || Component.prototype.isReactComponent || Component.prototype.componentWillMount || Component.prototype.componentWillUnmount || Component.prototype.componentDidMount || Component.prototype.componentDidUnmount || Component.prototype.render));
+}
+function isReactClassInstance(Component) {
+  return Component && isReactClass({
+    prototype: Object.getPrototypeOf(Component)
+  });
+}
+const getInternalInstance = instance => instance._reactInternalFiber || instance._reactInternalInstance || null;
+const updateInstance = instance => {
+  const {
+    updater,
+    forceUpdate
+  } = instance;
+
+  if (typeof forceUpdate === 'function') {
+    instance.forceUpdate();
+  } else if (updater && typeof updater.enqueueForceUpdate === 'function') {
+    updater.enqueueForceUpdate(instance);
+  }
+};
+const isFragmentNode = ({
+  type
+}) => React.Fragment && type === React.Fragment;
+const ContextType = React.createContext ? React.createContext() : null;
+const ConsumerType = ContextType && ContextType.Consumer.$$typeof;
+const ProviderType = ContextType && ContextType.Provider.$$typeof;
+const MemoType = React.memo && React.memo(() => null).$$typeof;
+const LazyType = React.lazy && React.lazy(() => null).$$typeof;
+const ForwardType = React.forwardRef && React.forwardRef(() => null).$$typeof;
+const CONTEXT_CURRENT_VALUE = '_currentValue';
+const isContextConsumer = ({
+  type
+}) => type && typeof type === 'object' && '$$typeof' in type && type.$$typeof === ConsumerType && ConsumerType;
+const isContextProvider = ({
+  type
+}) => type && typeof type === 'object' && '$$typeof' in type && type.$$typeof === ProviderType && ProviderType;
+const isMemoType = ({
+  type
+}) => type && typeof type === 'object' && '$$typeof' in type && type.$$typeof === MemoType && MemoType;
+const isLazyType = ({
+  type
+}) => type && typeof type === 'object' && '$$typeof' in type && type.$$typeof === LazyType && LazyType;
+const isForwardType = ({
+  type
+}) => type && typeof type === 'object' && '$$typeof' in type && type.$$typeof === ForwardType && ForwardType;
+const isContextType = type => isContextConsumer(type) || isContextProvider(type);
+const getElementType = type => {
+  const element = {
+    type
+  };
+
+  if (isContextConsumer(element)) {
+    return 'Consumer';
+  }
+
+  if (isContextProvider(element)) {
+    return 'Provider';
+  }
+
+  if (isLazyType(element)) {
+    return 'Lazy';
+  }
+
+  if (isMemoType(element)) {
+    return 'Memo';
+  }
+
+  if (isForwardType(element)) {
+    return 'Forward';
+  }
+
+  if (isReactClass(type)) {
+    return 'Class';
+  }
+
+  if (typeof element === 'function') {
+    return 'FC';
+  }
+
+  return 'unknown';
+};
+const getContextProvider = type => type && type._context;
+
+const configuration = {
+  logLevel: 'error',
+  pureSFC: true,
+  pureRender: true,
+  allowSFC: true,
+  reloadHooks: true,
+  reloadLifeCycleHooks: false,
+  reloadHooksOnBodyChange: true,
+  disableHotRenderer: false,
+  integratedComparator: false,
+  integratedResolver: false,
+  disableHotRendererWhenInjected: true,
+  showReactDomPatchNotification: true,
+  onComponentRegister: false,
+  onComponentCreate: false,
+  ignoreSFC: false,
+  ignoreSFCWhenInjected: true,
+  ignoreComponents: false,
+  errorReporter: undefined,
+  ErrorOverlay: undefined,
+  trackTailUpdates: true,
+  wrapLazy: true,
+  IS_REACT_MERGE_ENABLED: false
+};
+const internalConfiguration = {
+  disableProxyCreation: false
+};
+const setConfiguration = config => {
+  for (const i in config) {
+    if (config.hasOwnProperty(i)) {
+      configuration[i] = config[i];
+    }
+  }
+};
+
+const logger = {
+  debug(...args) {
+    if (['debug'].indexOf(configuration.logLevel) !== -1) {
+      console.debug(...args);
+    }
+  },
+
+  log(...args) {
+    if (['debug', 'log'].indexOf(configuration.logLevel) !== -1) {
+      console.log(...args);
+    }
+  },
+
+  warn(...args) {
+    if (['debug', 'log', 'warn'].indexOf(configuration.logLevel) !== -1) {
+      console.warn(...args);
+    }
+  },
+
+  error(...args) {
+    if (['debug', 'log', 'warn', 'error'].indexOf(configuration.logLevel) !== -1) {
+      console.error(...args);
+    }
+  }
+
+};
+
+function safeReactConstructor(Component, lastInstance) {
+  try {
+    if (lastInstance) {
+      return new Component(lastInstance.props, lastInstance.context);
+    }
+
+    return new Component({}, {});
+  } catch (e) {}
+
+  return null;
+}
+function isNativeFunction(fn) {
+  return typeof fn === 'function' ? fn.toString().indexOf('[native code]') > 0 : false;
+}
+const identity = a => a;
+const indirectEval = eval;
+const doesSupportClasses = function () {
+  try {
+    indirectEval('class Test {}');
+    return true;
+  } catch (e) {
+    return false;
+  }
+}();
+
+const ES6ProxyComponentFactory = (InitialParent, postConstructionAction) => indirectEval(`
+(function(InitialParent, postConstructionAction) {
+  return class ${InitialParent.name || 'HotComponent'} extends InitialParent {
+    /*
+     ! THIS IS NOT YOUR COMPONENT !
+     !  THIS IS REACT-HOT-LOADER  !
+  
+     this is a "${InitialParent.name}" component, patched by React-Hot-Loader
+     Sorry, but the real class code was hidden behind this facade
+     Please refer to https://github.com/gaearon/react-hot-loader for details...
+    */    
+    
+    constructor(props, context) {
+      super(props, context)
+      postConstructionAction.call(this)
+    }
+  }
+})
+`)(InitialParent, postConstructionAction);
+
+const ES5ProxyComponentFactory = function (InitialParent, postConstructionAction) {
+  function ProxyComponent(props, context) {
+    InitialParent.call(this, props, context);
+    postConstructionAction.call(this);
+  }
+
+  ProxyComponent.prototype = Object.create(InitialParent.prototype);
+  Object.setPrototypeOf(ProxyComponent, InitialParent);
+  return ProxyComponent;
+};
+
+const proxyClassCreator = doesSupportClasses ? ES6ProxyComponentFactory : ES5ProxyComponentFactory;
+function getOwnKeys(target) {
+  return [...Object.getOwnPropertyNames(target), ...Object.getOwnPropertySymbols(target)];
+}
+function shallowStringsEqual(a, b) {
+  for (const key in a) {
+    if (String(a[key]) !== String(b[key])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+function deepPrototypeUpdate(dest, source) {
+  const deepDest = Object.getPrototypeOf(dest);
+  const deepSrc = Object.getPrototypeOf(source);
+
+  if (deepDest && deepSrc && deepSrc !== deepDest) {
+    deepPrototypeUpdate(deepDest, deepSrc);
+  }
+
+  if (source.prototype && source.prototype !== dest.prototype) {
+    dest.prototype = source.prototype;
+  }
+}
+function safeDefineProperty(target, key, props) {
+  try {
+    Object.defineProperty(target, key, props);
+  } catch (e) {
+    logger.warn('Error while wrapping', key, ' -> ', e);
+  }
+}
+
+const PREFIX = '__reactstandin__';
+const PROXY_KEY = `${PREFIX}key`;
+const GENERATION = `${PREFIX}proxyGeneration`;
+const REGENERATE_METHOD = `${PREFIX}regenerateByEval`;
+const UNWRAP_PROXY = `${PREFIX}getCurrent`;
+const CACHED_RESULT = `${PREFIX}cachedResult`;
+const PROXY_IS_MOUNTED = `${PREFIX}isMounted`;
+const RENDERED_GENERATION = 'REACT_HOT_LOADER_RENDERED_GENERATION';
+
+const RESERVED_STATICS = ['length', 'displayName', 'name', 'arguments', 'caller', 'prototype', 'toString', 'valueOf', 'isStatelessFunctionalProxy', PROXY_KEY, UNWRAP_PROXY];
+
+function transferStaticProps(ProxyComponent, savedDescriptors, PreviousComponent, NextComponent) {
+  Object.getOwnPropertyNames(ProxyComponent).forEach(key => {
+    if (RESERVED_STATICS.indexOf(key) !== -1) {
+      return;
+    }
+
+    const prevDescriptor = Object.getOwnPropertyDescriptor(ProxyComponent, key);
+    const savedDescriptor = savedDescriptors[key];
+
+    if (!shallowEqual(prevDescriptor, savedDescriptor)) {
+      safeDefineProperty(NextComponent, key, prevDescriptor);
+    }
+  });
+  Object.getOwnPropertyNames(NextComponent).forEach(key => {
+    if (RESERVED_STATICS.indexOf(key) !== -1) {
+      return;
+    }
+
+    const prevDescriptor = PreviousComponent && Object.getOwnPropertyDescriptor(ProxyComponent, key);
+    const savedDescriptor = savedDescriptors[key];
+
+    if (prevDescriptor && savedDescriptor && !shallowEqual(savedDescriptor, prevDescriptor)) {
+      safeDefineProperty(NextComponent, key, prevDescriptor);
+      return;
+    }
+
+    if (prevDescriptor && !savedDescriptor) {
+      safeDefineProperty(ProxyComponent, key, prevDescriptor);
+      return;
+    }
+
+    const nextDescriptor = { ...Object.getOwnPropertyDescriptor(NextComponent, key),
+      configurable: true
+    };
+    savedDescriptors[key] = nextDescriptor;
+    safeDefineProperty(ProxyComponent, key, nextDescriptor);
+  });
+  Object.getOwnPropertyNames(ProxyComponent).forEach(key => {
+    if (RESERVED_STATICS.indexOf(key) !== -1) {
+      return;
+    }
+
+    if (NextComponent.hasOwnProperty(key)) {
+      return;
+    }
+
+    const proxyDescriptor = Object.getOwnPropertyDescriptor(ProxyComponent, key);
+
+    if (proxyDescriptor && !proxyDescriptor.configurable) {
+      return;
+    }
+
+    const prevDescriptor = PreviousComponent && Object.getOwnPropertyDescriptor(PreviousComponent, key);
+    const savedDescriptor = savedDescriptors[key];
+
+    if (prevDescriptor && savedDescriptor && !shallowEqual(savedDescriptor, prevDescriptor)) {
+      return;
+    }
+
+    safeDefineProperty(ProxyComponent, key, {
+      value: undefined
+    });
+  });
+  return savedDescriptors;
+}
+
+function mergeComponents(ProxyComponent, NextComponent, InitialComponent, lastInstance, injectedMembers) {
+  const injectedCode = {};
+
+  try {
+    const nextInstance = safeReactConstructor(NextComponent, lastInstance);
+
+    try {
+      deepPrototypeUpdate(InitialComponent, NextComponent);
+    } catch (e) {}
+
+    const proxyInstance = safeReactConstructor(ProxyComponent, lastInstance);
+
+    if (!nextInstance || !proxyInstance) {
+      return injectedCode;
+    }
+
+    const mergedAttrs = { ...proxyInstance,
+      ...nextInstance
+    };
+    const hasRegenerate = proxyInstance[REGENERATE_METHOD];
+    const ownKeys = getOwnKeys(Object.getPrototypeOf(ProxyComponent.prototype));
+    Object.keys(mergedAttrs).forEach(key => {
+      if (key.indexOf(PREFIX) === 0) return;
+      const nextAttr = nextInstance[key];
+      const prevAttr = proxyInstance[key];
+
+      if (nextAttr) {
+        if (isNativeFunction(nextAttr) || isNativeFunction(prevAttr)) {
+          const isSameArity = nextAttr.length === prevAttr.length;
+          const existsInPrototype = ownKeys.indexOf(key) >= 0 || ProxyComponent.prototype[key];
+
+          if ((isSameArity || !prevAttr) && existsInPrototype) {
+            if (hasRegenerate) {
+              injectedCode[key] = `Object.getPrototypeOf(this)['${key}'].bind(this)`;
+            } else {
+              logger.warn('React Hot Loader:,', 'Non-controlled class', ProxyComponent.name, 'contains a new native or bound function ', key, nextAttr, '. Unable to reproduce');
+            }
+          } else {
+            logger.warn('React Hot Loader:', 'Updated class ', ProxyComponent.name, 'contains native or bound function ', key, nextAttr, '. Unable to reproduce, use arrow functions instead.', `(arity: ${nextAttr.length}/${prevAttr.length}, proto: ${existsInPrototype ? 'yes' : 'no'}`);
+          }
+
+          return;
+        }
+
+        const nextString = String(nextAttr);
+        const injectedBefore = injectedMembers[key];
+        const isArrow = nextString.indexOf('=>') >= 0;
+        const isFunction = nextString.indexOf('function') >= 0 || isArrow;
+        const referToThis = nextString.indexOf('this') >= 0;
+
+        if (nextString !== String(prevAttr) || injectedBefore && nextString !== String(injectedBefore) || isArrow && referToThis) {
+          if (!hasRegenerate) {
+            if (!isFunction) {
+              injectedCode[key] = nextAttr;
+            } else {
+              logger.warn('React Hot Loader:', ' Updated class ', ProxyComponent.name, 'had different code for', key, nextAttr, '. Unable to reproduce. Regeneration support needed.');
+            }
+          } else {
+            injectedCode[key] = nextAttr;
+          }
+        } else {}
+      } else {}
+    });
+  } catch (e) {
+    logger.warn('React Hot Loader:', e);
+  }
+
+  return injectedCode;
+}
+
+function checkLifeCycleMethods(ProxyComponent, NextComponent) {
+  try {
+    const p1 = Object.getPrototypeOf(ProxyComponent.prototype);
+    const p2 = NextComponent.prototype;
+    reactLifeCycleMountMethods.forEach(key => {
+      const d1 = Object.getOwnPropertyDescriptor(p1, key) || {
+        value: p1[key]
+      };
+      const d2 = Object.getOwnPropertyDescriptor(p2, key) || {
+        value: p2[key]
+      };
+
+      if (!shallowStringsEqual(d1, d2)) {
+        logger.warn('React Hot Loader:', 'You did update', ProxyComponent.name, 's lifecycle method', key, '. Unable to repeat');
+      }
+    });
+  } catch (e) {}
+}
+
+function inject(target, currentGeneration, injectedMembers) {
+  if (target[GENERATION] !== currentGeneration) {
+    const hasRegenerate = !!target[REGENERATE_METHOD];
+    Object.keys(injectedMembers).forEach(key => {
+      try {
+        if (hasRegenerate) {
+          const usedThis = String(injectedMembers[key]).match(/_this([\d]+)/gi) || [];
+          target[REGENERATE_METHOD](key, `(function REACT_HOT_LOADER_SANDBOX () {
+          var _this  = this; // common babel transpile
+          ${usedThis.map(name => `var ${name} = this;`)}
+
+          return ${injectedMembers[key]};
+          }).call(this)`);
+        } else {
+          target[key] = injectedMembers[key];
+        }
+      } catch (e) {
+        logger.warn('React Hot Loader: Failed to regenerate method ', key, ' of class ', target);
+        logger.warn('got error', e);
+      }
+    });
+    target[GENERATION] = currentGeneration;
+  }
+}
+
+const has = Object.prototype.hasOwnProperty;
+let proxies = new WeakMap();
+const resetClassProxies = () => {
+  proxies = new WeakMap();
+};
+const blackListedClassMembers = ['constructor', 'render', 'componentWillMount', 'componentDidMount', 'componentDidCatch', 'componentWillReceiveProps', 'componentWillUnmount', 'hotComponentRender', 'getInitialState', 'getDefaultProps'];
+const defaultRenderOptions = {
+  componentWillRender: identity,
+  componentDidUpdate: result => result,
+  componentDidRender: result => result
+};
+
+const filteredPrototypeMethods = Proto => Object.getOwnPropertyNames(Proto).filter(prop => {
+  const descriptor = Object.getOwnPropertyDescriptor(Proto, prop);
+  return descriptor && prop.indexOf(PREFIX) !== 0 && blackListedClassMembers.indexOf(prop) < 0 && typeof descriptor.value === 'function';
+});
+
+const defineClassMember = (Class, methodName, methodBody) => safeDefineProperty(Class.prototype, methodName, {
+  configurable: true,
+  writable: true,
+  enumerable: false,
+  value: methodBody
+});
+
+const defineClassMembers = (Class, methods) => Object.keys(methods).forEach(methodName => defineClassMember(Class, methodName, methods[methodName]));
+
+const setSFPFlag = (component, flag) => safeDefineProperty(component, 'isStatelessFunctionalProxy', {
+  configurable: false,
+  writable: false,
+  enumerable: false,
+  value: flag
+});
+
+const copyMethodDescriptors = (target, source) => {
+  if (source) {
+    const keys = Object.getOwnPropertyNames(source);
+    keys.forEach(key => safeDefineProperty(target, key, Object.getOwnPropertyDescriptor(source, key)));
+    safeDefineProperty(target, 'toString', {
+      configurable: true,
+      writable: false,
+      enumerable: false,
+      value: function toString() {
+        return String(source);
+      }
+    });
+  }
+
+  return target;
+};
+
+const knownClassComponents = [];
+const forEachKnownClass = cb => knownClassComponents.forEach(cb);
+
+function createClassProxy(InitialComponent, proxyKey, options = {}) {
+  const renderOptions = { ...defaultRenderOptions,
+    ...options
+  };
+  const proxyConfig = { ...configuration,
+    ...options.proxy
+  };
+  const existingProxy = proxies.get(InitialComponent);
+
+  if (existingProxy) {
+    return existingProxy;
+  }
+
+  let CurrentComponent;
+  let savedDescriptors = {};
+  let injectedMembers = {};
+  let proxyGeneration = 0;
+  let classUpdatePostponed = null;
+  let instancesCount = 0;
+  let isFunctionalComponent = !isReactClass(InitialComponent);
+  let lastInstance = null;
+
+  function postConstructionAction() {
+    this[GENERATION] = 0;
+    lastInstance = this;
+
+    if (classUpdatePostponed) {
+      const callUpdate = classUpdatePostponed;
+      classUpdatePostponed = null;
+      callUpdate();
+    }
+
+    inject(this, proxyGeneration, injectedMembers);
+  }
+
+  function proxiedUpdate() {
+    if (this) {
+      inject(this, proxyGeneration, injectedMembers);
+    }
+  }
+
+  function lifeCycleWrapperFactory(wrapperName, sideEffect = identity) {
+    return copyMethodDescriptors(function wrappedMethod(...rest) {
+      proxiedUpdate.call(this);
+      sideEffect(this);
+      return !isFunctionalComponent && CurrentComponent.prototype[wrapperName] && CurrentComponent.prototype[wrapperName].apply(this, rest);
+    }, InitialComponent.prototype && InitialComponent.prototype[wrapperName]);
+  }
+
+  function methodWrapperFactory(wrapperName, realMethod) {
+    return copyMethodDescriptors(function wrappedMethod(...rest) {
+      return realMethod.apply(this, rest);
+    }, realMethod);
+  }
+
+  const fakeBasePrototype = Proto => filteredPrototypeMethods(Proto).reduce((acc, key) => {
+    acc[key] = methodWrapperFactory(key, Proto[key]);
+    return acc;
+  }, {});
+
+  const componentDidMount = lifeCycleWrapperFactory('componentDidMount', target => {
+    target[PROXY_IS_MOUNTED] = true;
+    target[RENDERED_GENERATION] = get();
+    instancesCount++;
+  });
+  const componentDidUpdate = lifeCycleWrapperFactory('componentDidUpdate', renderOptions.componentDidUpdate);
+  const componentWillUnmount = lifeCycleWrapperFactory('componentWillUnmount', target => {
+    target[PROXY_IS_MOUNTED] = false;
+    instancesCount--;
+  });
+
+  function hotComponentRender() {
+    renderOptions.componentWillRender(this);
+    proxiedUpdate.call(this);
+    let result;
+
+    if (has.call(this, CACHED_RESULT)) {
+      result = this[CACHED_RESULT];
+      delete this[CACHED_RESULT];
+    } else if (isFunctionalComponent) {
+      result = CurrentComponent(this.props, this.context);
+    } else {
+      const renderMethod = CurrentComponent.prototype.render || this.render;
+
+      if (renderMethod === proxiedRender) {
+        throw new Error('React-Hot-Loader: you are trying to render Component without .render method');
+      }
+
+      result = renderMethod.apply(this, arguments);
+    }
+
+    return renderOptions.componentDidRender.call(this, result);
+  }
+
+  function hotComponentUpdate() {
+    renderOptions.componentWillRender(this);
+    proxiedUpdate.call(this);
+  }
+
+  function proxiedRender(...args) {
+    renderOptions.componentWillRender(this);
+    return hotComponentRender.call(this, ...args);
+  }
+
+  const defineProxyMethods = (Proxy, Base = {}) => {
+    defineClassMembers(Proxy, { ...fakeBasePrototype(Base),
+      ...(proxyConfig.pureRender ? {} : {
+        render: proxiedRender
+      }),
+      hotComponentRender,
+      hotComponentUpdate,
+      componentDidMount,
+      componentDidUpdate,
+      componentWillUnmount
+    });
+  };
+
+  let ProxyFacade;
+  let ProxyComponent = null;
+  let proxy;
+
+  if (!isFunctionalComponent) {
+    ProxyComponent = proxyClassCreator(InitialComponent, postConstructionAction);
+    defineProxyMethods(ProxyComponent, InitialComponent.prototype);
+    knownClassComponents.push(ProxyComponent);
+    ProxyFacade = ProxyComponent;
+  } else if (!proxyConfig.allowSFC) {
+    proxyConfig.pureRender = false;
+    ProxyComponent = proxyClassCreator(Component, postConstructionAction);
+    defineProxyMethods(ProxyComponent);
+    ProxyFacade = ProxyComponent;
+  } else {
+    ProxyFacade = function (props, context) {
+      const result = CurrentComponent(props, context);
+
+      if (isReactClassInstance(result)) {
+        ProxyComponent = null;
+        transferStaticProps(ProxyFacade, savedDescriptors, null, CurrentComponent);
+        return result;
+      }
+
+      if (proxyConfig.pureSFC) {
+        if (!CurrentComponent.contextTypes) {
+          if (!ProxyFacade.isStatelessFunctionalProxy) {
+            setSFPFlag(ProxyFacade, true);
+          }
+
+          return renderOptions.componentDidRender(result);
+        }
+      }
+
+      setSFPFlag(ProxyFacade, false);
+      proxyConfig.pureRender = false;
+      ProxyComponent = proxyClassCreator(Component, postConstructionAction);
+      defineProxyMethods(ProxyComponent);
+      const determinateResult = new ProxyComponent(props, context);
+      determinateResult[CACHED_RESULT] = result;
+      return determinateResult;
+    };
+  }
+
+  function get$1() {
+    return ProxyFacade;
+  }
+
+  function getCurrent() {
+    return CurrentComponent;
+  }
+
+  safeDefineProperty(ProxyFacade, UNWRAP_PROXY, {
+    configurable: false,
+    writable: false,
+    enumerable: false,
+    value: getCurrent
+  });
+  safeDefineProperty(ProxyFacade, PROXY_KEY, {
+    configurable: false,
+    writable: false,
+    enumerable: false,
+    value: proxyKey
+  });
+  safeDefineProperty(ProxyFacade, 'toString', {
+    configurable: true,
+    writable: false,
+    enumerable: false,
+    value: function toString() {
+      return String(CurrentComponent);
+    }
+  });
+
+  function update(NextComponent) {
+    if (typeof NextComponent !== 'function') {
+      throw new Error('Expected a constructor.');
+    }
+
+    if (NextComponent === CurrentComponent) {
+      return false;
+    }
+
+    const existingProxy = proxies.get(NextComponent);
+
+    if (existingProxy) {
+      return false;
+    }
+
+    isFunctionalComponent = !isReactClass(NextComponent);
+    proxies.set(NextComponent, proxy);
+    proxyGeneration++;
+    const PreviousComponent = CurrentComponent;
+    CurrentComponent = NextComponent;
+    const displayName = getComponentDisplayName(CurrentComponent);
+    safeDefineProperty(ProxyFacade, 'displayName', {
+      configurable: true,
+      writable: false,
+      enumerable: true,
+      value: displayName
+    });
+
+    if (ProxyComponent) {
+      safeDefineProperty(ProxyComponent, 'name', {
+        value: displayName
+      });
+    }
+
+    savedDescriptors = transferStaticProps(ProxyFacade, savedDescriptors, PreviousComponent, NextComponent);
+
+    if (isFunctionalComponent || !ProxyComponent) ; else {
+      const classHotReplacement = () => {
+        checkLifeCycleMethods(ProxyComponent, NextComponent);
+
+        if (proxyGeneration > 1) {
+          getElementCloseHook(ProxyComponent);
+          filteredPrototypeMethods(ProxyComponent.prototype).forEach(methodName => {
+            if (!has.call(NextComponent.prototype, methodName)) {
+              delete ProxyComponent.prototype[methodName];
+            }
+          });
+        }
+
+        Object.setPrototypeOf(ProxyComponent.prototype, NextComponent.prototype);
+        defineProxyMethods(ProxyComponent, NextComponent.prototype);
+
+        if (proxyGeneration > 1) {
+          injectedMembers = mergeComponents(ProxyComponent, NextComponent, InitialComponent, lastInstance, injectedMembers);
+          getElementComparisonHook(ProxyComponent);
+        }
+      };
+
+      if (instancesCount > 0) {
+        classHotReplacement();
+      } else {
+        classUpdatePostponed = classHotReplacement;
+      }
+    }
+
+    return true;
+  }
+
+  update(InitialComponent);
+
+  const dereference = () => {
+    proxies.delete(InitialComponent);
+    proxies.delete(ProxyFacade);
+    proxies.delete(CurrentComponent);
+  };
+
+  proxy = {
+    get: get$1,
+    update,
+    dereference,
+    getCurrent: () => CurrentComponent
+  };
+  proxies.set(InitialComponent, proxy);
+  proxies.set(ProxyFacade, proxy);
+  safeDefineProperty(proxy, UNWRAP_PROXY, {
+    configurable: false,
+    writable: false,
+    enumerable: false,
+    value: getCurrent
+  });
+  return proxy;
+}
+
+let generation = 1;
+let hotComparisonCounter = 0;
+let hotComparisonRuns = 0;
+let hotReplacementGeneration = 0;
+
+const nullFunction = () => ({});
+
+let onHotComparisonOpen = nullFunction;
+let onHotComparisonElement = nullFunction;
+let onHotComparisonClose = nullFunction;
+const setComparisonHooks = (open, element, close) => {
+  onHotComparisonOpen = open;
+  onHotComparisonElement = element;
+  onHotComparisonClose = close;
+};
+const getElementComparisonHook = component => onHotComparisonElement(component);
+const getElementCloseHook = component => onHotComparisonClose(component);
+const hotComparisonOpen = () => hotComparisonCounter > 0 && hotComparisonRuns > 0 && hotReplacementGeneration > 0;
+const openGeneration = () => forEachKnownClass(onHotComparisonElement);
+const closeGeneration = () => forEachKnownClass(onHotComparisonClose);
+
+const incrementHot = () => {
+  if (!hotComparisonCounter) {
+    openGeneration();
+    onHotComparisonOpen();
+  }
+
+  hotComparisonCounter++;
+};
+
+const decrementHot = () => {
+  hotComparisonCounter--;
+
+  if (!hotComparisonCounter) {
+    closeGeneration();
+    hotComparisonRuns++;
+  }
+};
+const enterHotUpdate = () => {
+  Promise.resolve(incrementHot()).then(() => setTimeout(decrementHot, 0));
+};
+const increment = () => {
+  enterHotUpdate();
+  return generation++;
+};
+const get = () => generation;
+const incrementHotGeneration = () => hotReplacementGeneration++;
+const getHotGeneration = () => hotReplacementGeneration;
+
+const UNDEFINED_NAMES = {
+  Unknown: true,
+  Component: true
+};
+
+const areNamesEqual = (a, b) => a === b || UNDEFINED_NAMES[a] && UNDEFINED_NAMES[b];
+
+const isFunctional = fn => typeof fn === 'function';
+
+const getTypeOf = type => {
+  if (isReactClass(type)) return 'ReactComponent';
+  if (isFunctional(type)) return 'StatelessFunctional';
+  return 'Fragment';
+};
+
+function clearStringFast(str) {
+  return str.length < 12 ? str : ` ${str}`.slice(1);
+}
+
+//was import levenshtein from 'fast-levenshtein';
+//const haveTextSimilarity = (a, b) => a === b || levenshtein.get(clearStringFast(a), clearStringFast(b)) < a.length * 0.2;
+//this is using https://github.com/ka-weihe/fastest-levenshtein (copy/pasted at the bottom of this file)
+const haveTextSimilarity = (a, b) => a === b || distance(clearStringFast(a), clearStringFast(b)) < a.length * 0.2;
+
+const getBaseProto = source => source.prototype.hotComponentRender ? Object.getPrototypeOf(source.prototype) : source.prototype;
+
+const equalClasses = (a, b) => {
+  const prototypeA = getBaseProto(a);
+  const prototypeB = getBaseProto(b);
+  let hits = 0;
+  let misses = 0;
+  let comparisons = 0;
+  Object.getOwnPropertyNames(prototypeA).forEach(key => {
+    const descriptorA = Object.getOwnPropertyDescriptor(prototypeA, key);
+    const valueA = descriptorA && (descriptorA.value || descriptorA.get || descriptorA.set);
+    const descriptorB = Object.getOwnPropertyDescriptor(prototypeB, key);
+    const valueB = descriptorB && (descriptorB.value || descriptorB.get || descriptorB.set);
+
+    if (typeof valueA === 'function' && key !== 'constructor') {
+      comparisons++;
+
+      if (haveTextSimilarity(String(valueA), String(valueB))) {
+        hits++;
+      } else {
+        misses++;
+
+        if (key === 'render') {
+          misses++;
+        }
+      }
+    }
+  });
+  return hits > 0 && misses <= 1 || comparisons === 0;
+};
+
+const areSwappable = (a, b) => {
+  if (getIdByType(b) && getIdByType(a) === getIdByType(b)) {
+    return true;
+  }
+
+  if (getTypeOf(a) !== getTypeOf(b)) {
+    return false;
+  }
+
+  if (isReactClass(a)) {
+    return areNamesEqual(getComponentDisplayName(a), getComponentDisplayName(b)) && equalClasses(a, b);
+  }
+
+  if (isFunctional(a)) {
+    const nameA = getComponentDisplayName(a);
+
+    if (!areNamesEqual(nameA, getComponentDisplayName(b))) {
+      return false;
+    }
+
+    return nameA !== 'Component' || haveTextSimilarity(String(a), String(b));
+  }
+
+  return false;
+};
+function merge(...sources) {
+  let acc = {};
+
+  for (const source of sources) {
+    if (source instanceof Array) {
+      if (!(acc instanceof Array)) {
+        acc = [];
+      }
+
+      acc = [...acc, ...source];
+    } else if (source instanceof Object) {
+      for (const key of Object.keys(source)) {
+        let value = source[key];
+
+        if (value instanceof Object && key in acc) {
+          value = merge(acc[key], value);
+        }
+
+        acc = { ...acc,
+          [key]: value
+        };
+      }
+    }
+  }
+
+  return acc;
+}
+
+let signatures;
+let proxiesByID;
+let blackListedProxies;
+let registeredComponents;
+let idsByType;
+let elementCount = 0;
+let renderOptions = {};
+let componentOptions;
+
+const generateTypeId = () => `auto-${elementCount++}`;
+
+const getIdByType = type => idsByType.get(type);
+const isProxyType = type => type[PROXY_KEY];
+const getProxyById = id => proxiesByID[id];
+const getProxyByType = type => getProxyById(getIdByType(type));
+const registerComponent = type => registeredComponents.set(type, 1);
+const isRegisteredComponent = type => registeredComponents.has(type);
+const setStandInOptions = options => {
+  renderOptions = options;
+};
+const updateFunctionProxyById = (id, type, updater) => {
+  idsByType.set(type, id);
+  const proxy = proxiesByID[id];
+
+  if (!proxy) {
+    proxiesByID[id] = type;
+  }
+
+  updater(proxiesByID[id], type);
+  return proxiesByID[id];
+};
+const updateProxyById = (id, type, options = {}) => {
+  if (!id) {
+    return null;
+  }
+
+  idsByType.set(type, id);
+
+  if (!proxiesByID[id]) {
+    proxiesByID[id] = createClassProxy(type, id, merge({}, renderOptions, {
+      proxy: componentOptions.get(type) || {}
+    }, options));
+  } else if (proxiesByID[id].update(type)) {
+    incrementHotGeneration();
+  }
+
+  return proxiesByID[id];
+};
+const createProxyForType = (type, options) => getProxyByType(type) || updateProxyById(generateTypeId(), type, options);
+const isColdType = type => blackListedProxies.has(type);
+const isTypeBlacklisted = type => isColdType(type) || isCompositeComponent(type) && (configuration.ignoreSFC && !isReactClass(type) || configuration.ignoreComponents && isReactClass(type));
+const blacklistByType = type => blackListedProxies.set(type, true);
+const setComponentOptions = (component, options) => componentOptions.set(component, options);
+const addSignature = (type, signature) => signatures.set(type, signature);
+const getSignature = type => signatures.get(type);
+const resetProxies = () => {
+  proxiesByID = {};
+  idsByType = new WeakMap();
+  blackListedProxies = new WeakMap();
+  registeredComponents = new WeakMap();
+  componentOptions = new WeakMap();
+  signatures = new WeakMap();
+  resetClassProxies();
+};
+resetProxies();
+
+const tune = {
+  allowSFC: false
+};
+const preactAdapter = (instance, resolveType) => {
+  const oldHandler = instance.options.vnode;
+  setConfiguration(tune);
+
+  instance.options.vnode = vnode => {
+    if (vnode.type) {
+      vnode.type = resolveType(vnode.type);
+    } else if (vnode.nodeName) {
+      vnode.nodeName = resolveType(vnode.nodeName);
+    }
+
+    if (oldHandler) {
+      oldHandler(vnode);
+    }
+  };
+};
+
+const _jsxFileName = "~src\\errorReporter.js";
+let lastError = [];
+const overlayStyle = {
+  position: 'fixed',
+  left: 0,
+  top: 0,
+  right: 0,
+  backgroundColor: 'rgba(255,200,200,0.9)',
+  color: '#000',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
+  fontSize: '12px',
+  margin: 0,
+  padding: '16px',
+  maxHeight: '50%',
+  overflow: 'auto',
+  zIndex: 10000
+};
+const inlineErrorStyle = {
+  backgroundColor: '#FEE'
+};
+const liCounter = {
+  position: 'absolute',
+  left: '10px'
+};
+const listStyle = {};
+const EmptyErrorPlaceholder = ({
+  component
+}) => React.createElement('span', {
+  style: inlineErrorStyle,
+  role: "img",
+  'aria-label': "Rect-Hot-Loader Error",
+  __self: undefined,
+  __source: {
+    fileName: _jsxFileName,
+    lineNumber: 46
+  }
+}, "⚛️🔥🤕 (", component ? getComponentDisplayName(component.constructor || component) : 'Unknown location', ")", component && component.retryHotLoaderError && React.createElement('button', {
+  onClick: () => component.retryHotLoaderError(),
+  title: "Retry",
+  __self: undefined,
+  __source: {
+    fileName: _jsxFileName,
+    lineNumber: 50
+  }
+}, "⟳"));
+
+const errorHeader = (component, componentStack) => {
+  if (component || componentStack) {
+    return React.createElement('span', {
+      __self: undefined,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 60
+      }
+    }, "(", component ? getComponentDisplayName(component.constructor || component) : 'Unknown location', component && ', ', componentStack && componentStack.split('\n').filter(Boolean)[0], ")");
+  }
+
+  return null;
+};
+
+const mapError = ({
+  error,
+  errorInfo,
+  component
+}) => {
+  if (!error) {
+    error = {
+      message: 'undefined error'
+    };
+  }
+
+  return React.createElement(React.Fragment, {
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 78
+    }
+  }, React.createElement('p', {
+    style: {
+      color: 'red'
+    },
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 79
+    }
+  }, errorHeader(component, errorInfo && errorInfo.componentStack), ' ', error.toString ? error.toString() : error && error.message || 'undefined error'), errorInfo && errorInfo.componentStack ? React.createElement('div', {
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 84
+    }
+  }, React.createElement('div', {
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 85
+    }
+  }, "Stack trace:"), React.createElement('ul', {
+    style: {
+      color: 'red',
+      marginTop: '10px'
+    },
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 86
+    }
+  }, error.stack.split('\n').slice(1, 2).map((line, i) => React.createElement('li', {
+    key: String(i),
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 90
+    }
+  }, line)), React.createElement('hr', {
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 91
+    }
+  }), errorInfo.componentStack.split('\n').filter(Boolean).map((line, i) => React.createElement('li', {
+    key: String(i),
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 95
+    }
+  }, line)))) : error.stack && React.createElement('div', {
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 100
+    }
+  }, React.createElement('div', {
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 101
+    }
+  }, "Stack trace:"), React.createElement('ul', {
+    style: {
+      color: 'red',
+      marginTop: '10px'
+    },
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 102
+    }
+  }, error.stack.split('\n').map((line, i) => React.createElement('li', {
+    key: String(i),
+    __self: undefined,
+    __source: {
+      fileName: _jsxFileName,
+      lineNumber: 103
+    }
+  }, line)))));
+};
+
+class ErrorOverlay extends React.Component {
+  constructor(...args) {
+    super(...args);
+
+    ErrorOverlay.prototype.__init.call(this);
+
+    ErrorOverlay.prototype.__init2.call(this);
+
+    ErrorOverlay.prototype.__init3.call(this);
+  }
+
+  __init() {
+    this.state = {
+      visible: true
+    };
+  }
+
+  __init2() {
+    this.toggle = () => this.setState({
+      visible: !this.state.visible
+    });
+  }
+
+  __init3() {
+    this.retry = () => this.setState(() => {
+      const {
+        errors
+      } = this.props;
+      enterHotUpdate();
+      clearExceptions();
+      errors.map(({
+        component
+      }) => component).filter(Boolean).filter(({
+        retryHotLoaderError
+      }) => !!retryHotLoaderError).forEach(component => component.retryHotLoaderError());
+      return {};
+    });
+  }
+
+  render() {
+    const {
+      errors
+    } = this.props;
+
+    if (!errors.length) {
+      return null;
+    }
+
+    const {
+      visible
+    } = this.state;
+    return React.createElement('div', {
+      style: overlayStyle,
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 140
+      }
+    }, React.createElement('h2', {
+      style: {
+        margin: 0
+      },
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 141
+      }
+    }, "⚛️🔥😭: hot update was not successful ", React.createElement('button', {
+      onClick: this.toggle,
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 142
+      }
+    }, visible ? 'collapse' : 'expand'), React.createElement('button', {
+      onClick: this.retry,
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 143
+      }
+    }, "Retry")), visible && React.createElement('ul', {
+      style: listStyle,
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 146
+      }
+    }, errors.map((err, i) => React.createElement('li', {
+      key: i,
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 148
+      }
+    }, React.createElement('span', {
+      style: liCounter,
+      __self: this,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 149
+      }
+    }, "(", i + 1, "/", errors.length, ")"), mapError(err)))));
+  }
+
+}
+
+const initErrorOverlay = () => {
+  if (typeof document === 'undefined' || !document.body) {
+    return;
+  }
+
+  let div = document.querySelector('.react-hot-loader-error-overlay');
+
+  if (!div) {
+    div = document.createElement('div');
+    div.className = 'react-hot-loader-error-overlay';
+    document.body.appendChild(div);
+  }
+
+  if (lastError.length) {
+    const Overlay = configuration.ErrorOverlay || ErrorOverlay;
+    ReactDOM.render(React.createElement(Overlay, {
+      errors: lastError,
+      __self: undefined,
+      __source: {
+        fileName: _jsxFileName,
+        lineNumber: 174
+      }
+    }), div);
+  } else {
+    div.parentNode.removeChild(div);
+  }
+};
+
+function clearExceptions() {
+  if (lastError.length) {
+    lastError = [];
+    initErrorOverlay();
+  }
+}
+function logException(error, errorInfo, component) {
+  console.error(error);
+  lastError.push({
+    error,
+    errorInfo,
+    component
+  });
+  initErrorOverlay();
+}
+
+const hotRenderWithHooks = ReactDOM.hotRenderWithHooks || ((fiber, render) => render());
+
+function pushStack(stack, node) {
+  stack.type = node.type;
+  stack.elementType = node.elementType || node.type;
+  stack.children = [];
+  stack.instance = typeof node.type === 'function' ? node.stateNode : stack;
+  stack.fiber = node;
+
+  if (!stack.instance) {
+    stack.instance = {
+      SFC_fake: stack.type,
+      props: {},
+      render: () => hotRenderWithHooks(node, () => stack.type(stack.instance.props))
+    };
+  }
+}
+
+function hydrateFiberStack(node, stack) {
+  pushStack(stack, node);
+
+  if (node.child) {
+    let {
+      child
+    } = node;
+
+    do {
+      const childStack = {};
+      hydrateFiberStack(child, childStack);
+      stack.children.push(childStack);
+      child = child.sibling;
+    } while (child);
+  }
+}
+
+function pushState(stack, type, instance) {
+  stack.type = type;
+  stack.elementType = type;
+  stack.children = [];
+  stack.instance = instance || stack;
+
+  if (typeof type === 'function' && type.isStatelessFunctionalProxy) {
+    stack.instance = {
+      SFC_fake: type,
+      props: {},
+      render: () => type(stack.instance.props)
+    };
+  }
+}
+
+function hydrateLegacyStack(node, stack) {
+  if (node._currentElement) {
+    pushState(stack, node._currentElement.type, node._instance || stack);
+  }
+
+  if (node._renderedComponent) {
+    const childStack = {};
+    hydrateLegacyStack(node._renderedComponent, childStack);
+    stack.children.push(childStack);
+  } else if (node._renderedChildren) {
+    Object.keys(node._renderedChildren).forEach(key => {
+      const childStack = {};
+      hydrateLegacyStack(node._renderedChildren[key], childStack);
+      stack.children.push(childStack);
+    });
+  }
+}
+
+const shouldNotPatchComponent = type => isTypeBlacklisted(type);
+
+function resolveUtility(type) {
+  if (typeof type === 'object') {
+    if (configuration.integratedComparator) {
+      return type;
+    }
+
+    const element = {
+      type
+    };
+
+    if (isLazyType(element) || isMemoType(element) || isForwardType(element) || isContextType(element)) {
+      return getProxyByType(type) || type;
+    }
+  }
+
+  return undefined;
+}
+function resolveComponent(type, options = {}) {
+  const existingProxy = getProxyByType(type);
+
+  if (shouldNotPatchComponent(type)) {
+    return existingProxy ? existingProxy.getCurrent() : type;
+  }
+
+  if (!existingProxy && configuration.onComponentCreate) {
+    configuration.onComponentCreate(type, getComponentDisplayName(type));
+
+    if (shouldNotPatchComponent(type)) {
+      return type;
+    }
+  }
+
+  const proxy = internalConfiguration.disableProxyCreation ? existingProxy : createProxyForType(type, options);
+  return proxy ? proxy.get() : undefined;
+}
+function resolveProxy(type) {
+  if (isProxyType(type)) {
+    return type;
+  }
+
+  return undefined;
+}
+function resolveNotComponent(type) {
+  if (!isCompositeComponent(type)) {
+    return type;
+  }
+
+  return undefined;
+}
+const getLatestTypeVersion = type => {
+  const existingProxy = getProxyByType(type);
+  return existingProxy && existingProxy.getCurrent && existingProxy.getCurrent();
+};
+const resolveSimpleType = type => {
+  if (!type) {
+    return type;
+  }
+
+  const simpleResult = resolveProxy(type) || resolveUtility(type) || resolveNotComponent(type);
+
+  if (simpleResult) {
+    return simpleResult;
+  }
+
+  const lastType = getLatestTypeVersion(type);
+  return lastType || type;
+};
+const resolveType = (type, options = {}) => {
+  if (!type) {
+    return type;
+  }
+
+  return resolveProxy(type) || resolveUtility(type) || resolveNotComponent(type) || resolveComponent(type, options) || type;
+};
+
+function getReactStack(instance) {
+  const rootNode = getInternalInstance(instance);
+  const stack = {};
+
+  if (rootNode) {
+    const isFiber = typeof rootNode.tag === 'number';
+
+    if (isFiber) {
+      hydrateFiberStack(rootNode, stack);
+    } else {
+      hydrateLegacyStack(rootNode, stack);
+    }
+  }
+
+  return stack;
+}
+
+const markUpdate = ({
+  fiber
+}) => {
+  if (!fiber || typeof fiber.type === 'string') {
+    return;
+  }
+
+  const mostResentType = resolveType(fiber.type) || fiber.type;
+  fiber.type = mostResentType;
+  fiber.expirationTime = 1;
+
+  if (fiber.alternate) {
+    fiber.alternate.expirationTime = 1;
+    fiber.alternate.type = fiber.type;
+  }
+
+  if (fiber.memoizedProps && typeof fiber.memoizedProps === 'object') {
+    fiber.memoizedProps = {
+      cacheBusterProp: true,
+      ...fiber.memoizedProps
+    };
+  }
+
+  if (fiber.stateNode) ;
+};
+
+const cleanupReact = () => {
+  if (ReactDOM.hotCleanup) {
+    ReactDOM.hotCleanup();
+  }
+};
+const deepMarkUpdate = stack => {
+  markUpdate(stack);
+
+  if (stack.children) {
+    stack.children.forEach(deepMarkUpdate);
+  }
+};
+
+let renderStack = [];
+
+const stackReport = () => {
+  const rev = renderStack.slice().reverse();
+  logger.warn('in', rev[0].name, rev);
+};
+
+const emptyMap = new Map();
+
+const stackContext = () => (renderStack[renderStack.length - 1] || {}).context || emptyMap;
+
+const shouldUseRenderMethod = fn => fn && (isReactClassInstance(fn) || fn.SFC_fake);
+
+const getElementType$1 = child => child.type[UNWRAP_PROXY] ? child.type[UNWRAP_PROXY]() : child.type;
+
+const filterNullArray = a => {
+  if (!a) return [];
+  return a.filter(x => !!x);
+};
+
+const unflatten = a => a.reduce((acc, a) => {
+  if (Array.isArray(a)) {
+    acc.push(...unflatten(a));
+  } else {
+    acc.push(a);
+  }
+
+  return acc;
+}, []);
+
+const isArray = fn => Array.isArray(fn);
+
+const asArray = a => isArray(a) ? a : [a];
+
+const render = (component, stack) => {
+  if (!component) {
+    return [];
+  }
+
+  if (component.hotComponentUpdate) {
+    component.hotComponentUpdate();
+  }
+
+  if (shouldUseRenderMethod(component)) {
+    return component.hotComponentRender ? component.hotComponentRender() : component.render();
+  }
+
+  if (isForwardType(component)) {
+    return hotRenderWithHooks(stack.fiber, () => component.type.render(component.props, null));
+  }
+
+  if (isArray(component)) {
+    return component.map(render);
+  }
+
+  if (component.children) {
+    return component.children;
+  }
+
+  return [];
+};
+
+const NO_CHILDREN = {
+  children: []
+};
+
+const mapChildren = (children, instances) => ({
+  children: children.filter(c => c).map((child, index) => {
+    if (typeof child !== 'object' || child.isMerged) {
+      return child;
+    }
+
+    const instanceLine = instances[index] || {};
+    const oldChildren = asArray(instanceLine.children || []);
+
+    if (Array.isArray(child)) {
+      return {
+        type: null,
+        ...mapChildren(child, oldChildren)
+      };
+    }
+
+    const newChildren = asArray(child.props && child.props.children || child.children || []);
+    const nextChildren = child.type !== 'function' && oldChildren.length && mapChildren(newChildren, oldChildren);
+    return {
+      nextProps: child.props,
+      isMerged: true,
+      ...instanceLine,
+      ...(nextChildren || {}),
+      type: child.type
+    };
+  })
+});
+
+const mergeInject = (a, b, instance) => {
+  if (a && !Array.isArray(a)) {
+    return mergeInject([a], b);
+  }
+
+  if (b && !Array.isArray(b)) {
+    return mergeInject(a, [b]);
+  }
+
+  if (!a || !b) {
+    return NO_CHILDREN;
+  }
+
+  if (a.length === b.length) {
+    return mapChildren(a, b);
+  }
+
+  const nonNullA = filterNullArray(a);
+
+  if (nonNullA.length === b.length) {
+    return mapChildren(nonNullA, b);
+  }
+
+  const flatA = unflatten(nonNullA);
+  const flatB = unflatten(b);
+
+  if (flatA.length === flatB.length) {
+    return mapChildren(flatA, flatB);
+  }
+
+  if (flatB.length === 0 && flatA.length === 1 && typeof flatA[0] !== 'object') ; else if (!configuration.IS_REACT_MERGE_ENABLED) {
+    logger.warn(`React-hot-loader: unable to merge `, a, 'and children of ', instance);
+    stackReport();
+  }
+
+  return NO_CHILDREN;
+};
+
+const transformFlowNode = flow => flow.reduce((acc, node) => {
+  if (node && isFragmentNode(node)) {
+    if (node.props && node.props.children) {
+      return [...acc, ...filterNullArray(asArray(node.props.children))];
+    }
+
+    if (node.children) {
+      return [...acc, ...filterNullArray(asArray(node.children))];
+    }
+  }
+
+  return [...acc, node];
+}, []);
+
+let scheduledUpdates = [];
+let scheduledUpdate = 0;
+const flushScheduledUpdates = () => {
+  const instances = scheduledUpdates;
+  scheduledUpdates = [];
+  scheduledUpdate = 0;
+  instances.forEach(instance => instance[PROXY_IS_MOUNTED] && updateInstance(instance));
+};
+const unscheduleUpdate = instance => {
+  scheduledUpdates = scheduledUpdates.filter(inst => inst !== instance);
+};
+
+const scheduleInstanceUpdate = instance => {
+  scheduledUpdates.push(instance);
+
+  if (!scheduledUpdate) {
+    scheduledUpdate = setTimeout(flushScheduledUpdates, 4);
+  }
+};
+
+const hotReplacementRender = (instance, stack) => {
+  if (isReactClassInstance(instance)) {
+    const type = getElementType$1(stack);
+    renderStack.push({
+      name: getComponentDisplayName(type),
+      type,
+      props: stack.instance.props,
+      context: stackContext()
+    });
+  }
+
+  try {
+    const flow = transformFlowNode(filterNullArray(asArray(render(instance, stack))));
+    const {
+      children
+    } = stack;
+    flow.forEach((child, index) => {
+      let childType = child.type;
+      const stackChild = children[index];
+
+      const next = instance => {
+        const realProps = instance.props;
+        const nextProps = { ...realProps,
+          ...(child.nextProps || {}),
+          ...(child.props || {})
+        };
+
+        if (isReactClassInstance(instance) && instance.componentWillUpdate) {
+          instance.componentWillUpdate({ ...realProps
+          }, instance.state);
+        }
+
+        instance.props = nextProps;
+        hotReplacementRender(instance, stackChild);
+        instance.props = realProps;
+      };
+
+      if (typeof child !== 'object' || !stackChild || !stackChild.instance) {
+        if (stackChild && stackChild.children && stackChild.children.length) {
+          logger.error('React-hot-loader: reconciliation failed', 'could not dive into [', child, '] while some elements are still present in the tree.');
+          stackReport();
+        }
+
+        return;
+      }
+
+      if (typeof childType !== typeof stackChild.elementType) {
+        if (childType && stackChild.type) {
+          logger.warn('React-hot-loader: got ', childType, 'instead of', stackChild.type);
+          stackReport();
+        }
+
+        return;
+      }
+
+      if (isMemoType(child) || isLazyType(child)) {
+        if (stackChild.children && stackChild.children[0]) {
+          scheduleInstanceUpdate(stackChild.children[0].instance);
+        }
+
+        childType = childType.type || childType;
+      }
+
+      if (isForwardType(child)) {
+        next(stackChild.instance);
+      } else if (isContextConsumer(child)) {
+        try {
+          const contextValue = stackContext().get(getContextProvider(childType));
+          next({
+            children: (child.props ? child.props.children : child.children[0])(contextValue !== undefined ? contextValue : childType[CONTEXT_CURRENT_VALUE])
+          });
+        } catch (e) {}
+      } else if (typeof childType !== 'function') {
+        let childName = childType ? getComponentDisplayName(childType) : 'empty';
+        let extraContext = stackContext();
+
+        if (isContextProvider(child)) {
+          extraContext = new Map(extraContext);
+          extraContext.set(getContextProvider(childType), { ...(child.nextProps || {}),
+            ...(child.props || {})
+          }.value);
+          childName = 'ContextProvider';
+        }
+
+        renderStack.push({
+          name: childName,
+          type: childType,
+          props: stack.instance.props,
+          context: extraContext
+        });
+        next(mergeInject(transformFlowNode(asArray(child.props ? child.props.children : child.children)), stackChild.instance.children, stackChild.instance));
+        renderStack.pop();
+      } else {
+        if (childType === stackChild.type) {
+          next(stackChild.instance);
+        } else {
+          let childType = getElementType$1(child);
+
+          if (isMemoType(child)) {
+            childType = childType.type || childType;
+          }
+
+          if (!stackChild.type[PROXY_KEY]) {
+            if (!configuration.IS_REACT_MERGE_ENABLED) {
+              if (isTypeBlacklisted(stackChild.type)) {
+                logger.warn('React-hot-loader: cold element got updated ', stackChild.type);
+              }
+            }
+          }
+
+          if (isRegisteredComponent(childType) || isRegisteredComponent(stackChild.type)) {
+            if (resolveType(childType) === resolveType(stackChild.type)) {
+              next(stackChild.instance);
+            } else {}
+          } else if (areSwappable(childType, stackChild.type)) {
+            updateProxyById(stackChild.type[PROXY_KEY] || getIdByType(stackChild.type), childType);
+            next(stackChild.instance);
+          } else {
+            logger.warn(`React-hot-loader: a ${getComponentDisplayName(childType)} was found where a ${getComponentDisplayName(stackChild)} was expected.
+          ${childType}`);
+            stackReport();
+          }
+        }
+
+        scheduleInstanceUpdate(stackChild.instance);
+      }
+    });
+  } catch (e) {
+    if (e.then) ; else {
+      logger.warn('React-hot-loader: run time error during reconciliation', e);
+    }
+  }
+
+  if (isReactClassInstance(instance)) {
+    renderStack.pop();
+  }
+};
+
+var hotReplacementRender$1 = ((instance, stack) => {
+  if (configuration.disableHotRenderer) {
+    return;
+  }
+
+  try {
+    internalConfiguration.disableProxyCreation = true;
+    renderStack = [];
+    hotReplacementRender(instance, stack);
+  } catch (e) {
+    logger.warn('React-hot-loader: reconcilation failed due to error', e);
+  } finally {
+    internalConfiguration.disableProxyCreation = false;
+  }
+});
+
+const reconcileHotReplacement = ReactInstance => {
+  const stack = getReactStack(ReactInstance);
+  hotReplacementRender$1(ReactInstance, stack);
+  cleanupReact();
+  deepMarkUpdate(stack);
+};
+
+const renderReconciler = (target, force) => {
+  const currentGeneration = get();
+  const componentGeneration = target[RENDERED_GENERATION];
+  target[RENDERED_GENERATION] = currentGeneration;
+
+  if (!internalConfiguration.disableProxyCreation) {
+    if ((componentGeneration || force) && componentGeneration !== currentGeneration) {
+      enterHotUpdate();
+      reconcileHotReplacement(target);
+      return true;
+    }
+  }
+
+  return false;
+};
+
+function asyncReconciledRender(target) {
+  renderReconciler(target, false);
+}
+
+function proxyWrapper(element) {
+  if (!internalConfiguration.disableProxyCreation) {
+    unscheduleUpdate(this);
+  }
+
+  if (!element) {
+    return element;
+  }
+
+  if (Array.isArray(element)) {
+    return element.map(proxyWrapper);
+  }
+
+  if (typeof element.type === 'function') {
+    const proxy = getProxyByType(element.type);
+
+    if (proxy) {
+      return { ...element,
+        type: proxy.get()
+      };
+    }
+  }
+
+  return element;
+}
+const ERROR_STATE = 'react_hot_loader_catched_error';
+const ERROR_STATE_PROTO = 'react_hot_loader_catched_error-prototype';
+const OLD_RENDER = 'react_hot_loader_original_render';
+
+function componentDidCatch(error, errorInfo) {
+  this[ERROR_STATE] = {
+    location: 'boundary',
+    error,
+    errorInfo,
+    generation: get()
+  };
+  Object.getPrototypeOf(this)[ERROR_STATE_PROTO] = this[ERROR_STATE];
+
+  if (!configuration.errorReporter) {
+    logException(error, errorInfo, this);
+  }
+
+  this.forceUpdate();
+}
+
+function componentRender(...args) {
+  const {
+    error,
+    errorInfo,
+    generation
+  } = this[ERROR_STATE] || {};
+
+  if (error && generation === get()) {
+    return React.createElement(configuration.errorReporter || EmptyErrorPlaceholder, {
+      error,
+      errorInfo,
+      component: this
+    });
+  }
+
+  if (this.hotComponentUpdate) {
+    this.hotComponentUpdate();
+  }
+
+  try {
+    return this[OLD_RENDER].render.call(this, ...args);
+  } catch (renderError) {
+    this[ERROR_STATE] = {
+      location: 'render',
+      error: renderError,
+      generation: get()
+    };
+
+    if (!configuration.errorReporter) {
+      logException(renderError, undefined, this);
+    }
+
+    return componentRender.call(this);
+  }
+}
+
+function retryHotLoaderError() {
+  delete this[ERROR_STATE];
+  this.forceUpdate();
+}
+setComparisonHooks(() => ({}), component => {
+  if (!hotComparisonOpen()) {
+    return;
+  }
+
+  const {
+    prototype
+  } = component;
+
+  if (!prototype[OLD_RENDER]) {
+    const renderDescriptior = Object.getOwnPropertyDescriptor(prototype, 'render');
+    prototype[OLD_RENDER] = {
+      descriptor: renderDescriptior ? renderDescriptior.value : undefined,
+      render: prototype.render
+    };
+    prototype.componentDidCatch = componentDidCatch;
+    prototype.retryHotLoaderError = retryHotLoaderError;
+    prototype.render = componentRender;
+  }
+
+  delete prototype[ERROR_STATE];
+}, ({
+  prototype
+}) => {
+  if (prototype[OLD_RENDER]) {
+    const {
+      generation
+    } = prototype[ERROR_STATE_PROTO] || {};
+
+    if (generation === get()) ; else {
+      delete prototype.componentDidCatch;
+      delete prototype.retryHotLoaderError;
+
+      if (prototype.render === componentRender) {
+        if (!prototype[OLD_RENDER].descriptor) {
+          delete prototype.render;
+        } else {
+          prototype.render = prototype[OLD_RENDER].descriptor;
+        }
+      } else {
+        console.error('React-Hot-Loader: something unexpectedly mutated Component', prototype);
+      }
+
+      delete prototype[ERROR_STATE_PROTO];
+      delete prototype[OLD_RENDER];
+    }
+  }
+});
+setStandInOptions({
+  componentWillRender: asyncReconciledRender,
+  componentDidRender: proxyWrapper,
+  componentDidUpdate: component => {
+    component[RENDERED_GENERATION] = get();
+    flushScheduledUpdates();
+  }
+});
+
+const _jsxFileName$1 = "~src\\AppContainer.dev.js";
+
+class AppContainer extends React.Component {
+  static getDerivedStateFromProps(nextProps, prevState) {
+    if (prevState.generation !== get()) {
+      return {
+        error: null,
+        generation: get()
+      };
+    }
+
+    return null;
+  }
+
+  static __initStatic() {
+    this.reactHotLoadable = false;
+  }
+
+  constructor(props) {
+    super(props);
+
+    if (configuration.showReactDomPatchNotification) {
+      configuration.showReactDomPatchNotification = false;
+      console.warn('React-Hot-Loader: react-🔥-dom patch is not detected. React 16.6+ features may not work.');
+    }
+
+    this.state = {
+      error: null,
+      errorInfo: null,
+      generation: 0
+    };
+  }
+
+  shouldComponentUpdate(prevProps, prevState) {
+    if (prevState.error && this.state.error) {
+      return false;
+    }
+
+    return true;
+  }
+
+  componentDidCatch(error, errorInfo) {
+    logger.error(error);
+
+    if (!hotComparisonOpen()) {
+      this.setState({});
+      throw error;
+    }
+
+    const {
+      errorReporter = configuration.errorReporter
+    } = this.props;
+
+    if (!errorReporter) {
+      logException(error, errorInfo, this);
+    }
+
+    this.setState({
+      error,
+      errorInfo
+    });
+  }
+
+  retryHotLoaderError() {
+    this.setState({
+      error: null
+    }, () => {
+      retryHotLoaderError.call(this);
+    });
+  }
+
+  render() {
+    const {
+      error,
+      errorInfo
+    } = this.state;
+    const {
+      errorReporter: ErrorReporter = configuration.errorReporter || EmptyErrorPlaceholder
+    } = this.props;
+
+    if (error && this.props.errorBoundary) {
+      return React.createElement(ErrorReporter, {
+        error: error,
+        errorInfo: errorInfo,
+        component: this,
+        __self: this,
+        __source: {
+          fileName: _jsxFileName$1,
+          lineNumber: 82
+        }
+      });
+    }
+
+    if (this.hotComponentUpdate) {
+      this.hotComponentUpdate();
+    } else {
+      throw new Error('React-Hot-Loader: AppContainer should be patched');
+    }
+
+    return React.Children.only(this.props.children);
+  }
+
+}
+
+AppContainer.__initStatic();
+
+
+AppContainer.defaultProps = {
+  errorBoundary: true
+};
+
+//const realPolyfill = polyfill || defaultPolyfill;
+//realPolyfill(AppContainer);
+
+const _jsxFileName$2 = "~src\\reconciler\\fiberUpdater.js";
+const lazyConstructor = '_ctor';
+
+const getLazyConstructor = target => {
+  if (target[lazyConstructor]) {
+    return target[lazyConstructor];
+  }
+
+  if (target._payload) {
+    return target._payload._result;
+  }
+
+  return null;
+};
+
+const setLazyConstructor = (target, replacement) => {
+  replacement.isPatchedByReactHotLoader = true;
+
+  if (target[lazyConstructor]) {
+    target[lazyConstructor] = replacement;
+  } else if (target._payload) {
+      target._payload._hotUpdated = true;
+      target._payload._result = replacement;
+    } else {
+      console.error('could not update lazy component');
+    }
+};
+
+const patched = fn => {
+  fn.isPatchedByReactHotLoader = true;
+  return fn;
+};
+
+const patchLazyConstructor = target => {
+  if (configuration.wrapLazy && !getLazyConstructor(target).isPatchedByReactHotLoader) {
+    const ctor = getLazyConstructor(target);
+    setLazyConstructor(target, () => ctor().then(m => {
+      const C = resolveType(m.default);
+      enterHotUpdate();
+
+      if (!React.forwardRef) {
+        return {
+          default: patched(props => React.createElement(AppContainer, {
+            __self: undefined,
+            __source: {
+              fileName: _jsxFileName$2,
+              lineNumber: 55
+            }
+          }, React.createElement(C, { ...props,
+            __self: undefined,
+            __source: {
+              fileName: _jsxFileName$2,
+              lineNumber: 56
+            }
+          })))
+        };
+      }
+
+      return {
+        default: patched(React.forwardRef(function HotLoaderLazyWrapper(props, ref) {
+          return React.createElement(AppContainer, {
+            __self: this,
+            __source: {
+              fileName: _jsxFileName$2,
+              lineNumber: 66
+            }
+          }, React.createElement(C, { ...props,
+            ref: ref,
+            __self: this,
+            __source: {
+              fileName: _jsxFileName$2,
+              lineNumber: 67
+            }
+          }));
+        }))
+      };
+    }));
+  }
+};
+
+const updateLazy = (target, type) => {
+  const ctor = getLazyConstructor(type);
+
+  if (getLazyConstructor(target) !== ctor) {
+    ctor();
+  }
+
+  patchLazyConstructor(target);
+  patchLazyConstructor(type);
+};
+const updateMemo = (target, {
+  type
+}) => {
+  target.type = resolveType(type);
+};
+const updateForward = (target, {
+  render
+}) => {
+  target.render = render;
+};
+const updateContext = () => {};
+
+const getInnerComponentType = component => {
+  const unwrapper = component[UNWRAP_PROXY];
+  return unwrapper ? unwrapper() : component;
+};
+
+function haveEqualSignatures(prevType, nextType) {
+  try {
+    const prevSignature = getSignature(prevType);
+    const nextSignature = getSignature(nextType);
+
+    if (prevSignature === undefined && nextSignature === undefined) {
+      return true;
+    }
+
+    if (prevSignature === undefined || nextSignature === undefined) {
+      return false;
+    }
+
+    if (prevSignature.key !== nextSignature.key) {
+      return false;
+    }
+
+    const prevCustomHooks = prevSignature.getCustomHooks();
+    const nextCustomHooks = nextSignature.getCustomHooks();
+
+    if (prevCustomHooks.length !== nextCustomHooks.length) {
+      return false;
+    }
+
+    for (let i = 0; i < nextCustomHooks.length; i++) {
+      if (!haveEqualSignatures(prevCustomHooks[i], nextCustomHooks[i])) {
+        return false;
+      }
+    }
+  } catch (e) {
+    logger.error('React-Hot-Loader: error occurred while comparing hook signature', e);
+    return false;
+  }
+
+  return true;
+}
+
+const areSignaturesCompatible = (a, b) => {
+  if (!haveEqualSignatures(a, b)) {
+    logger.warn('⚛️🔥🎣 Hook order change detected: component', a, 'has been remounted');
+    return false;
+  }
+
+  return true;
+};
+
+const compareRegistered = (a, b) => getIdByType(a) === getIdByType(b) && getProxyByType(a) === getProxyByType(b) && areSignaturesCompatible(a, b);
+
+const areDeepSwappable = (oldType, newType) => {
+  const type = {
+    type: oldType
+  };
+
+  if (typeof oldType === 'function') {
+    return areSwappable(oldType, newType);
+  }
+
+  if (isForwardType(type)) {
+    return areDeepSwappable(oldType.render, newType.render);
+  }
+
+  if (isMemoType(type)) {
+    return areDeepSwappable(oldType.type, newType.type);
+  }
+
+  return false;
+};
+
+const compareComponents = (oldType, newType, setNewType, baseType) => {
+  let defaultResult = oldType === newType;
+
+  if (oldType && !newType || !oldType && newType || typeof oldType !== typeof newType || getElementType(oldType) !== getElementType(newType) || 0) {
+    return defaultResult;
+  }
+
+  if (getIdByType(newType) || getIdByType(oldType)) {
+    if (!compareRegistered(oldType, newType)) {
+      return false;
+    }
+
+    defaultResult = true;
+  }
+
+  if (isForwardType({
+    type: oldType
+  }) && isForwardType({
+    type: newType
+  })) {
+    if (!compareRegistered(oldType.render, newType.render)) {
+      return false;
+    }
+
+    if (oldType.render === newType.render || areDeepSwappable(oldType, newType)) {
+      setNewType(newType);
+      return true;
+    }
+
+    return defaultResult;
+  }
+
+  if (isMemoType({
+    type: oldType
+  }) && isMemoType({
+    type: newType
+  })) {
+    if (!compareRegistered(oldType.type, newType.type)) {
+      return false;
+    }
+
+    if (oldType.type === newType.type || areDeepSwappable(oldType, newType)) {
+      if (baseType) {
+        if (baseType.$$typeof === newType.$$typeof) {
+          setNewType(newType);
+        } else {
+          setNewType(newType.type);
+        }
+      } else {
+        logger.warn('Please update hot-loader/react-dom');
+
+        if (isReactClass(newType.type)) {
+          setNewType(newType);
+        } else {
+          setNewType(newType.type);
+        }
+      }
+
+      return true;
+    }
+
+    return defaultResult;
+  }
+
+  if (isLazyType({
+    type: oldType
+  })) {
+    updateLazy(oldType, newType);
+    return defaultResult;
+  }
+
+  if (isContextType({
+    type: oldType
+  })) {
+    setNewType(newType);
+    return defaultResult;
+  }
+
+  if (typeof newType === 'function' && (defaultResult || newType !== oldType && areSignaturesCompatible(newType, oldType) && areSwappable(newType, oldType))) {
+    const unwrapFactory = newType[UNWRAP_PROXY];
+    const oldProxy = unwrapFactory && getProxyByType(unwrapFactory());
+
+    if (oldProxy) {
+      oldProxy.dereference();
+      updateProxyById(oldType[PROXY_KEY] || getIdByType(oldType), getInnerComponentType(newType));
+    } else {
+      setNewType(newType);
+    }
+
+    return true;
+  }
+
+  return defaultResult;
+};
+
+const knownPairs = new WeakMap();
+const emptyMap$1 = new WeakMap();
+
+const getKnownPair = (oldType, newType) => {
+  const pair = knownPairs.get(oldType) || emptyMap$1;
+  return pair.get(newType);
+};
+
+const hotComponentCompare = (oldType, preNewType, setNewType, baseType) => {
+  const hotActive = hotComparisonOpen();
+  const newType = configuration.integratedResolver ? resolveType(preNewType) : preNewType;
+  let result = oldType === newType;
+
+  if (hotActive) {
+    if (!isReloadableComponent(oldType) || !isReloadableComponent(newType) || isColdType(oldType) || isColdType(oldType) || !oldType || !newType || 0) {
+      return result;
+    }
+
+    result = compareComponents(oldType, newType, setNewType, baseType);
+    const pair = knownPairs.get(oldType) || new WeakMap();
+    pair.set(newType, result);
+    knownPairs.set(oldType, pair);
+    return result;
+  }
+
+  return result || getKnownPair(oldType, newType) || false;
+};
+
+const forceSimpleSFC = {
+  proxy: {
+    pureSFC: true
+  }
+};
+
+const hookWrapper = hook => {
+  const wrappedHook = function (cb, deps) {
+    if (configuration.reloadHooks && deps) {
+      const inputs = [...deps];
+
+      if (configuration.reloadHooksOnBodyChange) {
+        inputs.push(String(cb));
+      }
+
+      if (deps.length > 0 || configuration.reloadLifeCycleHooks && deps.length === 0) {
+        inputs.push(getHotGeneration());
+      }
+
+      return hook(cb, inputs);
+    }
+
+    return hook(cb, deps);
+  };
+
+  wrappedHook.isPatchedByReactHotLoader = true;
+  return wrappedHook;
+};
+
+const noDeps = () => [];
+
+const reactHotLoader = {
+  signature(type, key, getCustomHooks = noDeps) {
+    addSignature(type, {
+      key,
+      getCustomHooks
+    });
+    return type;
+  },
+
+  register(type, uniqueLocalName, fileName, options = {}) {
+    const id = `${fileName}#${uniqueLocalName}`;
+
+    if (isCompositeComponent(type) && typeof uniqueLocalName === 'string' && uniqueLocalName && typeof fileName === 'string' && fileName) {
+      const proxy = getProxyById(id);
+
+      if (proxy && proxy.getCurrent() !== type) {
+        if (!configuration.IS_REACT_MERGE_ENABLED) {
+          if (isTypeBlacklisted(type) || isTypeBlacklisted(proxy.getCurrent())) {
+            logger.error('React-hot-loader: Cold component', uniqueLocalName, 'at', fileName, 'has been updated');
+          }
+        }
+      }
+
+      if (configuration.onComponentRegister) {
+        configuration.onComponentRegister(type, uniqueLocalName, fileName);
+      }
+
+      if (configuration.onComponentCreate) {
+        configuration.onComponentCreate(type, getComponentDisplayName(type));
+      }
+
+      registerComponent(updateProxyById(id, type, options).get());
+      registerComponent(type);
+      increment();
+    }
+
+    if (isContextType({
+      type
+    })) {
+      ['Provider', 'Consumer'].forEach(prop => {
+        const descriptor = Object.getOwnPropertyDescriptor(type, prop);
+
+        if (descriptor && descriptor.value) {
+          updateFunctionProxyById(`${id}:${prop}`, descriptor.value, updateContext);
+        }
+      });
+      updateFunctionProxyById(id, type, updateContext);
+      increment();
+    }
+
+    if (isLazyType({
+      type
+    })) {
+      updateFunctionProxyById(id, type, updateLazy);
+      increment();
+    }
+
+    if (isForwardType({
+      type
+    })) {
+      reactHotLoader.register(type.render, `${uniqueLocalName}:render`, fileName, forceSimpleSFC);
+      updateFunctionProxyById(id, type, updateForward);
+      increment();
+    }
+
+    if (isMemoType({
+      type
+    })) {
+      reactHotLoader.register(type.type, `${uniqueLocalName}:memo`, fileName, forceSimpleSFC);
+      updateFunctionProxyById(id, type, updateMemo);
+      increment();
+    }
+  },
+
+  reset() {
+    resetProxies();
+  },
+
+  preact(instance) {
+    preactAdapter(instance, resolveType);
+  },
+
+  resolveType(type) {
+    return resolveType(type);
+  },
+
+  patch(React, ReactDOM) {
+    let typeResolver = resolveType;
+
+    if (ReactDOM && !ReactDOM.render) {
+      logger.error('React-Hot-Loader: broken state detected, please import React-Hot-Loader before react-dom, see https://github.com/gaearon/react-hot-loader/issues/1315');
+    }
+
+    if (ReactDOM && ReactDOM.setHotElementComparator) {
+      ReactDOM.setHotElementComparator(hotComponentCompare);
+      configuration.disableHotRenderer = configuration.disableHotRendererWhenInjected;
+      configuration.ignoreSFC = configuration.ignoreSFCWhenInjected;
+      configuration.IS_REACT_MERGE_ENABLED = true;
+      configuration.showReactDomPatchNotification = false;
+      configuration.integratedComparator = true;
+
+      if (ReactDOM.setHotTypeResolver) {
+        configuration.integratedResolver = true;
+        typeResolver = resolveSimpleType;
+        ReactDOM.setHotTypeResolver(resolveType);
+      }
+    }
+
+    if (!React.createElement.isPatchedByReactHotLoader) {
+      const originalCreateElement = React.createElement;
+
+      React.createElement = (type, ...args) => originalCreateElement(typeResolver(type), ...args);
+
+      React.createElement.isPatchedByReactHotLoader = true;
+    }
+
+    if (!React.cloneElement.isPatchedByReactHotLoader) {
+      const originalCloneElement = React.cloneElement;
+
+      React.cloneElement = (element, ...args) => {
+        const newType = element.type && typeResolver(element.type);
+
+        if (newType && newType !== element.type) {
+          return originalCloneElement({ ...element,
+            type: newType
+          }, ...args);
+        }
+
+        return originalCloneElement(element, ...args);
+      };
+
+      React.cloneElement.isPatchedByReactHotLoader = true;
+    }
+
+    if (!React.createFactory.isPatchedByReactHotLoader) {
+      React.createFactory = type => {
+        const factory = React.createElement.bind(null, type);
+        factory.type = type;
+        return factory;
+      };
+
+      React.createFactory.isPatchedByReactHotLoader = true;
+    }
+
+    if (!React.Children.only.isPatchedByReactHotLoader) {
+      const originalChildrenOnly = React.Children.only;
+
+      React.Children.only = children => originalChildrenOnly({ ...children,
+        type: typeResolver(children.type)
+      });
+
+      React.Children.only.isPatchedByReactHotLoader = true;
+    }
+
+    if (React.useEffect && !React.useEffect.isPatchedByReactHotLoader) {
+      React.useEffect = hookWrapper(React.useEffect);
+      React.useLayoutEffect = hookWrapper(React.useLayoutEffect);
+      React.useCallback = hookWrapper(React.useCallback);
+      React.useMemo = hookWrapper(React.useMemo);
+      const {
+        useContext
+      } = React;
+
+      React.useContext = (context, ...args) => useContext(typeResolver(context), ...args);
+    }
+  }
+
+};
+
+const openedModules = {};
+let lastModuleOpened = '';
+const getLastModuleOpened = () => lastModuleOpened;
+const hotModules = {};
+
+const createHotModule = () => ({
+  instances: [],
+  updateTimeout: 0
+});
+
+const hotModule = moduleId => {
+  if (!hotModules[moduleId]) {
+    hotModules[moduleId] = createHotModule();
+  }
+
+  return hotModules[moduleId];
+};
+const isOpened = sourceModule => sourceModule && !!openedModules[sourceModule.id];
+const enter = sourceModule => {
+  if (sourceModule && sourceModule.id) {
+    lastModuleOpened = sourceModule.id;
+    openedModules[sourceModule.id] = true;
+  } else {
+    logger.warn('React-hot-loader: no `module` variable found. Did you shadow a system variable?');
+  }
+};
+const leave = sourceModule => {
+  if (sourceModule && sourceModule.id) {
+    delete openedModules[sourceModule.id];
+  }
+};
+
+const createQueue = (runner = a => a()) => {
+  let promise;
+  let queue = [];
+
+  const runAll = () => {
+    const oldQueue = queue;
+    oldQueue.forEach(cb => cb());
+    queue = [];
+  };
+
+  const add = cb => {
+    if (queue.length === 0) {
+      promise = Promise.resolve().then(() => runner(runAll));
+    }
+
+    queue.push(cb);
+    return promise;
+  };
+
+  return add;
+};
+
+const _jsxFileName$3 = "~src\\hot.dev.js";
+const requireIndirect = typeof __webpack_require__ !== 'undefined' ? __webpack_require__ : require;
+
+const chargeFailbackTimer = id => setTimeout(() => {
+  const error = `hot update failed for module "${id}". Last file processed: "${getLastModuleOpened()}".`;
+  logger.error(error);
+  logException({
+    toString: () => error
+  });
+}, 100);
+
+const clearFailbackTimer = timerId => clearTimeout(timerId);
+
+const createHoc = (SourceComponent, TargetComponent) => {
+  hoistNonReactStatic(TargetComponent, SourceComponent);
+  TargetComponent.displayName = `HotExported${getComponentDisplayName(SourceComponent)}`;
+  return TargetComponent;
+};
+
+const runInRequireQueue = createQueue();
+const runInRenderQueue = createQueue(cb => {
+  if (ReactDOM.unstable_batchedUpdates) {
+    ReactDOM.unstable_batchedUpdates(cb);
+  } else {
+    cb();
+  }
+});
+
+const makeHotExport = (sourceModule, moduleId) => {
+  const updateInstances = possibleError => {
+    if (possibleError && possibleError instanceof Error) {
+      console.error(possibleError);
+      return;
+    }
+
+    const module = hotModule(moduleId);
+
+    const deepUpdate = () => {
+      runInRenderQueue(() => {
+        enterHotUpdate();
+        const gen = getHotGeneration();
+        module.instances.forEach(inst => inst.forceUpdate());
+
+        if (configuration.trackTailUpdates) {
+          let runLimit = 0;
+
+          const checkTailUpdates = () => {
+            setTimeout(() => {
+              if (getHotGeneration() !== gen) {
+                logger.warn('React-Hot-Loader: some components were updated out-of-bound. Updating your app to reconcile the changes.');
+                increment();
+                deepUpdate();
+              } else if (++runLimit < 5) {
+                checkTailUpdates();
+              }
+            }, 16);
+          };
+
+          checkTailUpdates();
+        }
+      });
+    };
+
+    runInRequireQueue(() => {
+      try {
+        requireIndirect(moduleId);
+      } catch (e) {
+        console.error('React-Hot-Loader: error detected while loading', moduleId);
+        console.error(e);
+      }
+    }).then(deepUpdate);
+  };
+
+  if (sourceModule.hot) {
+    sourceModule.hot.accept(updateInstances);
+
+    if (sourceModule.hot.addStatusHandler) {
+      if (sourceModule.hot.status() === 'idle') {
+        sourceModule.hot.addStatusHandler(status => {
+          if (status === 'apply') {
+            clearExceptions();
+            updateInstances();
+          }
+        });
+      }
+    }
+  } else {
+    logger.warn('React-hot-loader: Hot Module Replacement is not enabled');
+  }
+};
+
+const hot = sourceModule => {
+  if (!sourceModule) {
+    throw new Error('React-hot-loader: `hot` was called without any argument provided');
+  }
+
+  const moduleId = sourceModule.id || sourceModule.i || sourceModule.filename;
+
+  if (!moduleId) {
+    console.error('`module` provided', sourceModule);
+    throw new Error('React-hot-loader: `hot` could not find the `name` of the the `module` you have provided');
+  }
+
+  const module = hotModule(moduleId);
+  makeHotExport(sourceModule, moduleId);
+  clearExceptions();
+  const failbackTimer = chargeFailbackTimer(moduleId);
+  let firstHotRegistered = false;
+  return (WrappedComponent, props) => {
+    clearFailbackTimer(failbackTimer);
+
+    if (!firstHotRegistered) {
+      firstHotRegistered = true;
+      reactHotLoader.register(WrappedComponent, getComponentDisplayName(WrappedComponent), `RHL${moduleId}`);
+    }
+
+    return createHoc(WrappedComponent, class ExportedComponent extends Component {
+      componentDidMount() {
+        module.instances.push(this);
+      }
+
+      componentWillUnmount() {
+        if (isOpened(sourceModule)) {
+          const componentName = getComponentDisplayName(WrappedComponent);
+          logger.error(`React-hot-loader: Detected AppContainer unmount on module '${moduleId}' update.\n` + `Did you use "hot(${componentName})" and "ReactDOM.render()" in the same file?\n` + `"hot(${componentName})" shall only be used as export.\n` + `Please refer to "Getting Started" (https://github.com/gaearon/react-hot-loader/).`);
+        }
+
+        module.instances = module.instances.filter(a => a !== this);
+      }
+
+      render() {
+        return React.createElement(AppContainer, { ...props,
+          __self: this,
+          __source: {
+            fileName: _jsxFileName$3,
+            lineNumber: 170
+          }
+        }, React.createElement(WrappedComponent, { ...this.props,
+          __self: this,
+          __source: {
+            fileName: _jsxFileName$3,
+            lineNumber: 171
+          }
+        }));
+      }
+
+    });
+  };
+};
+
+reactHotLoader.register(AppContainer, 'AppContainer', 'hot-dev');
+
+const getProxyOrType = type => {
+  const proxy = getProxyByType(type);
+  return proxy ? proxy.get() : type;
+};
+
+const areComponentsEqual = (a, b) => getProxyOrType(a) === getProxyOrType(b);
+const compareOrSwap = (oldType, newType) => hotComponentCompare(oldType, newType);
+const cold = type => {
+  blacklistByType(type);
+  return type;
+};
+const configureComponent = (component, options) => setComponentOptions(component, options);
+const setConfig = config => setConfiguration(config);
+
+reactHotLoader.patch(React, ReactDOM);
+
+export default reactHotLoader;
+export { AppContainer, areComponentsEqual, cold, compareOrSwap, configureComponent, enter as enterModule, hot, leave as leaveModule, setConfig };
+
+
+
+const peq = new Uint32Array(0x10000);
+
+const myers_32 = (a, b) => {
+  const n = a.length;
+  const m = b.length;
+  const lst = 1 << (n - 1);
+  let pv = -1;
+  let mv = 0;
+  let sc = n;
+  let i = n;
+  while (i--) {
+    peq[a.charCodeAt(i)] |= 1 << i;
+  }
+  for (i = 0; i < m; i++) {
+    let eq = peq[b.charCodeAt(i)];
+    const xv = eq | mv;
+    eq |= ((eq & pv) + pv) ^ pv;
+    mv |= ~(eq | pv);
+    pv &= eq;
+    if (mv & lst) {
+      sc++;
+    }
+    if (pv & lst) {
+      sc--;
+    }
+    mv = (mv << 1) | 1;
+    pv = (pv << 1) | ~(xv | mv);
+    mv &= xv;
+  }
+  i = n;
+  while (i--) {
+    peq[a.charCodeAt(i)] = 0;
+  }
+  return sc;
+};
+
+const myers_x = (b, a) => {
+  const n = a.length;
+  const m = b.length;
+  const mhc = [];
+  const phc = [];
+  const hsize = Math.ceil(n / 32);
+  const vsize = Math.ceil(m / 32);
+  for (let i = 0; i < hsize; i++) {
+    phc[i] = -1;
+    mhc[i] = 0;
+  }
+  let j = 0;
+  for (; j < vsize - 1; j++) {
+    let mv = 0;
+    let pv = -1;
+    const start = j * 32;
+    const vlen = Math.min(32, m) + start;
+    for (let k = start; k < vlen; k++) {
+      peq[b.charCodeAt(k)] |= 1 << k;
+    }
+    for (let i = 0; i < n; i++) {
+      const eq = peq[a.charCodeAt(i)];
+      const pb = (phc[(i / 32) | 0] >>> i % 32) & 1;
+      const mb = (mhc[(i / 32) | 0] >>> i % 32) & 1;
+      const xv = eq | mv;
+      const xh = ((((eq | mb) & pv) + pv) ^ pv) | eq | mb;
+      let ph = mv | ~(xh | pv);
+      let mh = pv & xh;
+      if ((ph >>> 31) ^ pb) {
+        phc[(i / 32) | 0] ^= 1 << i % 32;
+      }
+      if ((mh >>> 31) ^ mb) {
+        mhc[(i / 32) | 0] ^= 1 << i % 32;
+      }
+      ph = (ph << 1) | pb;
+      mh = (mh << 1) | mb;
+      pv = mh | ~(xv | ph);
+      mv = ph & xv;
+    }
+    for (let k = start; k < vlen; k++) {
+      peq[b.charCodeAt(k)] = 0;
+    }
+  }
+  let mv = 0;
+  let pv = -1;
+  const start = j * 32;
+  const vlen = Math.min(32, m - start) + start;
+  for (let k = start; k < vlen; k++) {
+    peq[b.charCodeAt(k)] |= 1 << k;
+  }
+  let score = m;
+  for (let i = 0; i < n; i++) {
+    const eq = peq[a.charCodeAt(i)];
+    const pb = (phc[(i / 32) | 0] >>> i % 32) & 1;
+    const mb = (mhc[(i / 32) | 0] >>> i % 32) & 1;
+    const xv = eq | mv;
+    const xh = ((((eq | mb) & pv) + pv) ^ pv) | eq | mb;
+    let ph = mv | ~(xh | pv);
+    let mh = pv & xh;
+    score += (ph >>> ((m % 32) - 1)) & 1;
+    score -= (mh >>> ((m % 32) - 1)) & 1;
+    if ((ph >>> 31) ^ pb) {
+      phc[(i / 32) | 0] ^= 1 << i % 32;
+    }
+    if ((mh >>> 31) ^ mb) {
+      mhc[(i / 32) | 0] ^= 1 << i % 32;
+    }
+    ph = (ph << 1) | pb;
+    mh = (mh << 1) | mb;
+    pv = mh | ~(xv | ph);
+    mv = ph & xv;
+  }
+  for (let k = start; k < vlen; k++) {
+    peq[b.charCodeAt(k)] = 0;
+  }
+  return score;
+};
+
+const distance = (a, b) => {
+  if (a.length < b.length) {
+    [b, a] = [a, b];
+  }
+  if (b.length === 0) {
+    return a.length;
+  }
+  if (a.length <= 32) {
+    return myers_32(a, b);
+  }
+  return myers_x(a, b);
+};
+
+const closest = (str, arr) => {
+  let min_distance = Infinity;
+  let min_index = 0;
+  for (let i = 0; i < arr.length; i++) {
+    const dist = distance(str, arr[i]);
+    if (dist < min_distance) {
+      min_distance = dist;
+      min_index = i;
+    }
+  }
+  return arr[min_index];
+};
+
+//export { closest, distance };
