@@ -1,5 +1,5 @@
-import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
+import React, { Component } from 'preact/compat';
+import ReactDOM from 'preact/compat';
 //import shallowEqual from 'shallowequal';
 //import levenshtein from 'fast-levenshtein';
 
